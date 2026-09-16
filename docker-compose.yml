@@ -1,38 +1,60 @@
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "5173:5173"
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: rag_postgres
+    restart: always
     environment:
-      DATABASE_URL: postgres://root:mysecretpassword@postgres:5432/local
-      ORIGIN: http://localhost:5173
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-    depends_on:
-      postgres:
-        condition: service_healthy
+      POSTGRES_USER: ${POSTGRES_USER:-rag_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag_password}
+      POSTGRES_DB: ${POSTGRES_DB:-rag_db}
     volumes:
-      - .:/app
-      - /app/node_modules
-    command: bun run dev --host 0.0.0.0
-
-  postgres:
-    image: postgres:17
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: mysecretpassword
-      POSTGRES_DB: local
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - rag_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U root -d local"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 5
+
+  api:
+    build: 
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: rag_flask_api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD:-rag_password}@db:5432/${POSTGRES_DB:-rag_db}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - rag_network
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: rag_svelte_web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PUBLIC_API_URL=http://api:5000
+    depends_on:
+      - api
+    networks:
+      - rag_network
 
 volumes:
-  postgres_data:
+  pgdata:
+
+networks:
+  rag_network:
+    driver: bridge
