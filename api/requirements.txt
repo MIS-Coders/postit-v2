@@ -1,0 +1,9 @@
+flask==3.0.3
+gunicorn>=21.2.0
+langchain-google-genai>=4.0.0
+langchain-postgres>=0.0.12
+psycopg[binary]>=3.1.18
+pymupdf4llm>=0.0.17
+langchain>=0.2.0
+python-dotenv>=1.0.1
+langchain-text-splitters
