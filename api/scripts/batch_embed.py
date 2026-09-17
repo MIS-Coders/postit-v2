@@ -48,7 +48,7 @@ if not connection_string:
 
 vector_store = PGVector(
     embeddings=embeddings,
-    collection_name="legacy_documents",
+    collection_name="sop_ik_documents",
     connection=connection_string,
     use_jsonb=True,
 )
