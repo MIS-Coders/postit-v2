@@ -127,7 +127,8 @@ def get_existing_files():
 def delete_file_embeddings(source: str):
     """
     Menghapus seluruh chunk/embedding lama berdasarkan source.
-    Digunakan ketika file yang sama telah berubah.
+    Digunakan ketika file yang sama telah berubah atau
+    perlu di-reprocess.
     """
 
     engine = create_engine(connection_string)
@@ -177,9 +178,13 @@ def migrate_pdfs(pdf_directory: str):
         )
 
         print()
+        print("=" * 60)
         print(f"Checking: {filename}")
 
+        # ====================================================
         # Calculate current file hash
+        # ====================================================
+
         current_hash = calculate_file_hash(
             file_path
         )
@@ -192,7 +197,6 @@ def migrate_pdfs(pdf_directory: str):
 
             old_hash = existing_files[filename]
 
-            # Same filename + same hash
             if old_hash == current_hash:
 
                 print(
@@ -202,7 +206,10 @@ def migrate_pdfs(pdf_directory: str):
 
                 continue
 
+            # ------------------------------------------------
             # Same filename + different hash
+            # ------------------------------------------------
+
             else:
 
                 print(
@@ -223,27 +230,20 @@ def migrate_pdfs(pdf_directory: str):
             )
 
         # ====================================================
-        # Extract PDF
+        # Extract PDF PER PAGE
         # ====================================================
 
         print(
             f"Processing: {filename}"
         )
 
-        markdown_content = pymupdf4llm.to_markdown(
-            file_path
-        )
-
-        # ====================================================
-        # Split document into chunks
-        # ====================================================
-
-        chunks = text_splitter.split_text(
-            markdown_content
+        page_chunks = pymupdf4llm.to_markdown(
+            file_path,
+            page_chunks=True
         )
 
         print(
-            f"Created {len(chunks)} chunks"
+            f"Detected {len(page_chunks)} pages"
         )
 
         # ====================================================
@@ -252,19 +252,50 @@ def migrate_pdfs(pdf_directory: str):
 
         docs_to_insert = []
 
-        for index, chunk in enumerate(chunks):
+        global_chunk_index = 0
 
-            doc = Document(
-                page_content=chunk,
-                metadata={
-                    "source": filename,
-                    "file_hash": current_hash,
-                    "type": "legacy_migration",
-                    "chunk": index
-                }
+        for page_index, page_data in enumerate(
+            page_chunks
+        ):
+
+            # PyMuPDF page numbering:
+            # manusia biasanya menggunakan 1-based index
+            page_number = page_index + 1
+
+            # Extract text from current page
+            page_text = page_data["text"]
+
+            if not page_text.strip():
+                continue
+
+            # ----------------------------------------------
+            # Split current page into chunks
+            # ----------------------------------------------
+
+            chunks = text_splitter.split_text(
+                page_text
             )
 
-            docs_to_insert.append(doc)
+            for chunk in chunks:
+
+                doc = Document(
+                    page_content=chunk,
+                    metadata={
+                        "source": filename,
+                        "file_hash": current_hash,
+                        "type": "legacy_migration",
+
+                        # Global chunk number
+                        "chunk": global_chunk_index,
+
+                        # Page number
+                        "pages": [page_number],
+                    }
+                )
+
+                docs_to_insert.append(doc)
+
+                global_chunk_index += 1
 
         # ====================================================
         # Insert embeddings
@@ -283,6 +314,12 @@ def migrate_pdfs(pdf_directory: str):
             print(
                 f"Successfully embedded "
                 f"{len(docs_to_insert)} chunks"
+            )
+
+        else:
+
+            print(
+                f"No text chunks found: {filename}"
             )
 
     # ========================================================
