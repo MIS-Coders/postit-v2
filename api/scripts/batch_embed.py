@@ -28,7 +28,7 @@ if not api_key:
 embeddings = GoogleGenerativeAIEmbeddings(
     model="gemini-embedding-001",
     google_api_key=api_key,
-    output_dimensionality=768
+    output_dimensionality=768,
 )
 
 
@@ -60,7 +60,7 @@ vector_store = PGVector(
 
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=1000,
-    chunk_overlap=200
+    chunk_overlap=200,
 )
 
 
@@ -76,7 +76,6 @@ def calculate_file_hash(file_path: str) -> str:
     sha256 = hashlib.sha256()
 
     with open(file_path, "rb") as file:
-
         while chunk := file.read(8192):
             sha256.update(chunk)
 
@@ -84,13 +83,67 @@ def calculate_file_hash(file_path: str) -> str:
 
 
 # ============================================================
-# 6. Get existing files from PostgreSQL
+# 6. Get department from subfolder
+# ============================================================
+
+def get_department(root_directory: str, file_path: str) -> str:
+    """
+    Mengambil nama subfolder langsung di bawah root directory
+    sebagai department.
+
+    Contoh:
+
+        uploads/
+        ├── HR/
+        │   └── SOP.pdf
+        └── IT/
+            └── SOP.pdf
+
+    Maka:
+
+        uploads/HR/SOP.pdf -> HR
+        uploads/IT/SOP.pdf -> IT
+    """
+
+    root_directory = os.path.abspath(root_directory)
+    file_path = os.path.abspath(file_path)
+
+    relative_path = os.path.relpath(
+        file_path,
+        root_directory,
+    )
+
+    path_parts = relative_path.split(os.sep)
+
+    # Minimal:
+    # department/file.pdf
+    if len(path_parts) < 2:
+        raise ValueError(
+            f"File harus berada di dalam subfolder department: "
+            f"{file_path}"
+        )
+
+    department = path_parts[0]
+
+    return department
+
+
+# ============================================================
+# 7. Get existing files from PostgreSQL
 # ============================================================
 
 def get_existing_files():
     """
-    Mengambil source dan file_hash dari embedding
-    yang sudah tersimpan di collection legacy_documents.
+    Mengambil source, file_hash, dan department dari embedding
+    yang sudah tersimpan.
+
+    Source menggunakan relative path, misalnya:
+
+        HR/SOP.pdf
+        IT/SOP.pdf
+
+    sehingga file dengan nama sama tetapi department berbeda
+    tidak dianggap sebagai file yang sama.
     """
 
     engine = create_engine(connection_string)
@@ -98,7 +151,8 @@ def get_existing_files():
     query = text("""
         SELECT DISTINCT
             cmetadata->>'source' AS source,
-            cmetadata->>'file_hash' AS file_hash
+            cmetadata->>'file_hash' AS file_hash,
+            cmetadata->>'department' AS department
         FROM langchain_pg_embedding
         WHERE cmetadata->>'source' IS NOT NULL
     """)
@@ -106,29 +160,28 @@ def get_existing_files():
     existing_files = {}
 
     with engine.connect() as connection:
-
         results = connection.execute(query)
 
         for row in results:
-
             source = row.source
             file_hash = row.file_hash
 
             if source:
-                existing_files[source] = file_hash
+                existing_files[source] = {
+                    "file_hash": file_hash,
+                    "department": row.department,
+                }
 
     return existing_files
 
 
 # ============================================================
-# 7. Delete old embeddings for a file
+# 8. Delete old embeddings for a file
 # ============================================================
 
 def delete_file_embeddings(source: str):
     """
     Menghapus seluruh chunk/embedding lama berdasarkan source.
-    Digunakan ketika file yang sama telah berubah atau
-    perlu di-reprocess.
     """
 
     engine = create_engine(connection_string)
@@ -139,10 +192,9 @@ def delete_file_embeddings(source: str):
     """)
 
     with engine.begin() as connection:
-
         result = connection.execute(
             query,
-            {"source": source}
+            {"source": source},
         )
 
     print(
@@ -152,10 +204,17 @@ def delete_file_embeddings(source: str):
 
 
 # ============================================================
-# 8. Process PDF files
+# 9. Process PDF files recursively
 # ============================================================
 
 def migrate_pdfs(pdf_directory: str):
+
+    pdf_directory = os.path.abspath(pdf_directory)
+
+    if not os.path.isdir(pdf_directory):
+        raise ValueError(
+            f"Directory tidak ditemukan: {pdf_directory}"
+        )
 
     existing_files = get_existing_files()
 
@@ -166,161 +225,191 @@ def migrate_pdfs(pdf_directory: str):
 
     total_new_chunks = 0
 
-    # Iterate through PDF files
-    for filename in os.listdir(pdf_directory):
+    # ========================================================
+    # Walk through all subfolders
+    # ========================================================
 
-        if not filename.lower().endswith(".pdf"):
-            continue
+    for root, dirs, files in os.walk(pdf_directory):
 
-        file_path = os.path.join(
-            pdf_directory,
-            filename
-        )
+        for filename in files:
 
-        print()
-        print("=" * 60)
-        print(f"Checking: {filename}")
-
-        # ====================================================
-        # Calculate current file hash
-        # ====================================================
-
-        current_hash = calculate_file_hash(
-            file_path
-        )
-
-        # ====================================================
-        # Case 1: File already exists
-        # ====================================================
-
-        if filename in existing_files:
-
-            old_hash = existing_files[filename]
-
-            if old_hash == current_hash:
-
-                print(
-                    f"Skipping "
-                    f"(already processed): {filename}"
-                )
-
+            if not filename.lower().endswith(".pdf"):
                 continue
 
-            # ------------------------------------------------
-            # Same filename + different hash
-            # ------------------------------------------------
+            file_path = os.path.join(
+                root,
+                filename,
+            )
+
+            # =================================================
+            # Get department from subfolder
+            # =================================================
+
+            department = get_department(
+                pdf_directory,
+                file_path,
+            )
+
+            # =================================================
+            # Use relative path as source
+            # =================================================
+
+            source = os.path.relpath(
+                file_path,
+                pdf_directory,
+            )
+
+            # Normalize path separator
+            source = source.replace(os.sep, "/")
+
+            print()
+            print("=" * 60)
+            print(f"Checking: {source}")
+            print(f"Department: {department}")
+
+            # =================================================
+            # Calculate current file hash
+            # =================================================
+
+            current_hash = calculate_file_hash(
+                file_path
+            )
+
+            # =================================================
+            # Case 1: File already exists
+            # =================================================
+
+            if source in existing_files:
+
+                old_hash = existing_files[source]["file_hash"]
+
+                if old_hash == current_hash:
+
+                    print(
+                        f"Skipping "
+                        f"(already processed): {source}"
+                    )
+
+                    continue
+
+                # ------------------------------------------------
+                # Same source + different hash
+                # ------------------------------------------------
+
+                print(
+                    f"File changed, re-processing: "
+                    f"{source}"
+                )
+
+                delete_file_embeddings(source)
+
+            # =================================================
+            # Case 2: New file
+            # =================================================
 
             else:
 
                 print(
-                    f"File changed, re-processing: "
-                    f"{filename}"
+                    f"New file detected: {source}"
                 )
 
-                delete_file_embeddings(filename)
-
-        # ====================================================
-        # Case 2: New file
-        # ====================================================
-
-        else:
+            # =================================================
+            # Extract PDF PER PAGE
+            # =================================================
 
             print(
-                f"New file detected: {filename}"
+                f"Processing: {source}"
             )
 
-        # ====================================================
-        # Extract PDF PER PAGE
-        # ====================================================
-
-        print(
-            f"Processing: {filename}"
-        )
-
-        page_chunks = pymupdf4llm.to_markdown(
-            file_path,
-            page_chunks=True
-        )
-
-        print(
-            f"Detected {len(page_chunks)} pages"
-        )
-
-        # ====================================================
-        # Create LangChain Documents
-        # ====================================================
-
-        docs_to_insert = []
-
-        global_chunk_index = 0
-
-        for page_index, page_data in enumerate(
-            page_chunks
-        ):
-
-            # PyMuPDF page numbering:
-            # manusia biasanya menggunakan 1-based index
-            page_number = page_index + 1
-
-            # Extract text from current page
-            page_text = page_data["text"]
-
-            if not page_text.strip():
-                continue
-
-            # ----------------------------------------------
-            # Split current page into chunks
-            # ----------------------------------------------
-
-            chunks = text_splitter.split_text(
-                page_text
+            page_chunks = pymupdf4llm.to_markdown(
+                file_path,
+                page_chunks=True,
             )
 
-            for chunk in chunks:
+            print(
+                f"Detected {len(page_chunks)} pages"
+            )
 
-                doc = Document(
-                    page_content=chunk,
-                    metadata={
-                        "source": filename,
-                        "file_hash": current_hash,
-                        "type": "legacy_migration",
+            # =================================================
+            # Create LangChain Documents
+            # =================================================
 
-                        # Global chunk number
-                        "chunk": global_chunk_index,
+            docs_to_insert = []
 
-                        # Page number
-                        "pages": [page_number],
-                    }
+            global_chunk_index = 0
+
+            for page_index, page_data in enumerate(
+                page_chunks
+            ):
+
+                # PyMuPDF page numbering:
+                # manusia biasanya menggunakan 1-based index
+                page_number = page_index + 1
+
+                # Extract text from current page
+                page_text = page_data["text"]
+
+                if not page_text.strip():
+                    continue
+
+                # ----------------------------------------------
+                # Split current page into chunks
+                # ----------------------------------------------
+
+                chunks = text_splitter.split_text(
+                    page_text
                 )
 
-                docs_to_insert.append(doc)
+                for chunk in chunks:
 
-                global_chunk_index += 1
+                    doc = Document(
+                        page_content=chunk,
+                        metadata={
+                            # Relative path
+                            "source": source,
 
-        # ====================================================
-        # Insert embeddings
-        # ====================================================
+                            # SHA-256
+                            "file_hash": current_hash,
 
-        if docs_to_insert:
+                            # Department from subfolder
+                            "department": department,
 
-            vector_store.add_documents(
-                docs_to_insert
-            )
+                            # Global chunk number
+                            "chunk": global_chunk_index,
 
-            total_new_chunks += len(
-                docs_to_insert
-            )
+                            # Page number
+                            "pages": [page_number],
+                        },
+                    )
 
-            print(
-                f"Successfully embedded "
-                f"{len(docs_to_insert)} chunks"
-            )
+                    docs_to_insert.append(doc)
 
-        else:
+                    global_chunk_index += 1
 
-            print(
-                f"No text chunks found: {filename}"
-            )
+            # =================================================
+            # Insert embeddings
+            # =================================================
+
+            if docs_to_insert:
+
+                vector_store.add_documents(
+                    docs_to_insert
+                )
+
+                total_new_chunks += len(
+                    docs_to_insert
+                )
+
+                print(
+                    f"Successfully embedded "
+                    f"{len(docs_to_insert)} chunks"
+                )
+
+            else:
+
+                print(
+                    f"No text chunks found: {source}"
+                )
 
     # ========================================================
     # Summary
@@ -336,7 +425,7 @@ def migrate_pdfs(pdf_directory: str):
 
 
 # ============================================================
-# 9. Main
+# 10. Main
 # ============================================================
 
 if __name__ == "__main__":
