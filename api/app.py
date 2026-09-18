@@ -1,5 +1,6 @@
 import os
 from flask import Flask, request, Response, jsonify
+from flask_cors import CORS
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_postgres.vectorstores import PGVector
@@ -8,56 +9,91 @@ from langchain_core.runnables import RunnablePassthrough
 
 load_dotenv()
 app = Flask(__name__)
+CORS(app)
 
 # 1. Initialize Models and Database Connection
-embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.2)
+api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    raise ValueError("GEMINI_API_KEY is missing!")
+
+embeddings = GoogleGenerativeAIEmbeddings(
+    model="models/gemini-embedding-001",
+    google_api_key=api_key,
+    output_dimensionality=768,
+)
+
+# 2. Vector Store Connection
+connection_string = os.getenv("DATABASE_URL")
+if not connection_string:
+    raise ValueError("DATABASE_URL is missing!")
 
 vector_store = PGVector(
     embeddings=embeddings,
-    collection_name="legacy_documents",
-    connection=os.getenv("DATABASE_URL"),
+    collection_name="sop_ik_documents",
+    connection=connection_string,
+    use_jsonb=True,
 )
 
-# Convert the vector store into a retriever that fetches the top 3 results
-retriever = vector_store.as_retriever(search_kwargs={"k": 3})
+# 3. LLM and prompt setup
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=api_key, temperature=0.2)
 
-# 2. Define the System Prompt Template
 system_prompt = (
-    "You are an assistant for question-answering tasks. "
-    "Use the following retrieved context to answer the question. "
-    "If you don't know the answer, say that you don't know.\n\n"
-    "Context: {context}"
+    "Anda adalah asisten virtual SOP (Standard Operating Procedure) dan IK (Instruksi Kerja).\n"
+    "Jawablah pertanyaan pengguna secara akurat berdasarkan konteks dokumen yang diberikan.\n"
+    "Jika informasi tidak ditemukan dalam konteks, katakan dengan jelas bahwa Anda tidak menemukan jawabannya di dokumen SOP/IK.\n"
+    "Sebutkan nama dokumen sumber (source), departemen, dan nomor halaman jika tersedia dalam konteks.\n\n"
+    "Konteks Dokumen:\n{context}"
 )
 prompt = ChatPromptTemplate.from_messages([
     ("system", system_prompt),
     ("human", "{question}"),
 ])
 
-# 3. Create the RAG Chain using LCEL (LangChain Expression Language)
 def format_docs(docs):
-    return "\n\n".join(doc.page_content for doc in docs)
+    """Formats retrieved chunks with clear source, department, and page metadata."""
+    formatted = []
+    for doc in docs:
+        source = doc.metadata.get("source", "Unknown")
+        dept = doc.metadata.get("department", "General")
+        pages = doc.metadata.get("pages", [])
+        page_str = f"Hal. {', '.join(map(str, pages))}" if pages else "Hal. N/A"
+        
+        header = f"--- [Sumber: {source} | Dept: {dept} | {page_str}] ---"
+        formatted.append(f"{header}\n{doc.page_content}")
+    return "\n\n".join(formatted)
 
-rag_chain = (
-    {"context": retriever | format_docs, "question": RunnablePassthrough()}
-    | prompt
-    | llm
-)
-
+# ============================================================
+# 4. Chat Endpoint
+# ============================================================
 @app.route("/api/chat", methods=["POST"])
 def chat():
-    data = request.get_json()
+    data = request.get_json() or {}
     user_query = data.get("query")
-    
+    department_filter = data.get("department")  # Optional metadata filter
+
     if not user_query:
         return jsonify({"error": "Query is required"}), 400
 
-    # Execute the chain and stream the response chunk-by-chunk
+    # Build search parameters with optional metadata filtering, fetch the top 3 most relevant text chunks
+    search_kwargs = {"k": 3}
+    if department_filter:
+        search_kwargs["filter"] = {"department": department_filter}
+
+    retriever = vector_store.as_retriever(search_kwargs=search_kwargs)
+
+    # Construct the RAG Chain
+    rag_chain = (
+        {"context": retriever | format_docs, "question": RunnablePassthrough()}
+        | prompt
+        | llm
+    )
+
     def generate():
         for chunk in rag_chain.stream(user_query):
-            yield chunk.content
-            
-    return Response(generate(), mimetype="text/plain")
+            if chunk.content:
+                yield chunk.content
+
+    return Response(generate(), mimetype="text/plain; charset=utf-8")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
