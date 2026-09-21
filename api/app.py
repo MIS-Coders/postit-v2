@@ -35,7 +35,7 @@ vector_store = PGVector(
 )
 
 # 3. LLM and prompt setup
-llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=api_key, temperature=0.2)
+llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash", google_api_key=api_key, temperature=0.2)
 
 system_prompt = (
     "Anda adalah asisten virtual SOP (Standard Operating Procedure) dan IK (Instruksi Kerja).\n"
@@ -90,8 +90,20 @@ def chat():
 
     def generate():
         for chunk in rag_chain.stream(user_query):
-            if chunk.content:
-                yield chunk.content
+            # 1. Extract the actual text string from the chunk
+            text_value = ""
+            
+            if isinstance(chunk.content, str):
+                text_value = chunk.content
+            elif isinstance(chunk.content, list):
+                # If it's a list of blocks, combine the text fields
+                for block in chunk.content:
+                    if isinstance(block, dict) and 'text' in block:
+                        text_value += block['text']
+                        
+            # 2. Encode the string to bytes before yielding
+            if text_value:
+                yield text_value.encode('utf-8')
 
     return Response(generate(), mimetype="text/plain; charset=utf-8")
 
