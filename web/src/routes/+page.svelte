@@ -2,6 +2,7 @@
 <p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p> -->
 <!-- web/src/routes/+page.svelte -->
 <script lang="ts">
+  import { marked } from 'marked';
   interface Message {
     role: 'user' | 'assistant';
     content: string;
@@ -86,7 +87,7 @@
     {#each messages as msg}
       <div class="message-bubble {msg.role}">
         <div class="avatar">{msg.role === 'user' ? 'Anda' : 'Bot'}</div>
-        <div class="content">{msg.content || (isLoading ? 'Mencari dokumen & mengetik...' : '')}</div>
+        <div class="content">{@html marked.parse(msg.content) || (isLoading ? 'Mencari dokumen & mengetik...' : '')}</div>
       </div>
     {/each}
   </main>
