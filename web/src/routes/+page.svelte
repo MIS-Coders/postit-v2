@@ -12,7 +12,7 @@
   let selectedDepartment = $state('');
   let isLoading = $state(false);
 
-  const departments = ['All', 'HR', 'IT', 'Finance', 'Operations'];
+  const departments = ['All', 'HCM', 'MIS'];
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
