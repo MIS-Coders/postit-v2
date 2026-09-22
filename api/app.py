@@ -35,7 +35,7 @@ vector_store = PGVector(
 )
 
 # 3. LLM and prompt setup
-llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash", google_api_key=api_key, temperature=0.2)
+llm = ChatGoogleGenerativeAI(model='gemini-3.1-flash-lite', google_api_key=api_key, temperature=0.2)
 
 system_prompt = (
     "Anda adalah asisten virtual SOP (Standard Operating Procedure) dan IK (Instruksi Kerja).\n"
