@@ -5,6 +5,8 @@
 @import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
+/* layar pendek, mis. laptop Windows 1366x768 dengan taskbar + toolbar browser */
+@custom-variant short (@media (max-height: 760px));
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
@@ -50,7 +52,7 @@
 	--card-foreground: oklch(0.987 0.002 197.1);
 	--popover: oklch(0.218 0.008 223.9);
 	--popover-foreground: oklch(0.987 0.002 197.1);
-	--primary: oklch(0.432 0.095 166.913);
+	--primary: oklch(0.596 0.145 163.225);
 	--primary-foreground: oklch(0.979 0.021 166.113);
 	--secondary: oklch(0.274 0.006 286.033);
 	--secondary-foreground: oklch(0.985 0 0);
@@ -78,6 +80,7 @@
 }
 
 @theme inline {
+	--font-sans: 'Geist Variable', sans-serif;
 	--font-mono: 'Geist Mono Variable', monospace;
 	--font-heading: 'Geist Variable', sans-serif;
 	--color-sidebar-ring: var(--sidebar-ring);
@@ -123,6 +126,9 @@
 @layer base {
 	* {
 		@apply border-border outline-ring/50;
+		/* scrollbar tipis, terutama supaya di Windows tidak makan tempat */
+		scrollbar-width: thin;
+		scrollbar-color: var(--border) transparent;
 	}
 	body {
 		@apply bg-background text-foreground;
