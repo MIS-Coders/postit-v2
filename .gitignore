@@ -25,3 +25,7 @@ vite.config.ts.timestamp-*
 # policy file
 uploads 
 .pdf
+# Backup file konfigurasi (dibuat saat perubahan deploy)
+*.bak
+storage/
+

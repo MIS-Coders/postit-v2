@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { marked } from 'marked';
+	import { CHAT_ENDPOINT } from '$lib/api';
 	import RiArrowUpLine from 'remixicon-svelte/icons/arrow-up-line';
 	import RiCloseLine from 'remixicon-svelte/icons/close-line';
 	import RiCollapseDiagonalLine from 'remixicon-svelte/icons/collapse-diagonal-line';
@@ -62,7 +63,7 @@
 		scrollToBottom();
 
 		try {
-			const response = await fetch('http://localhost:5000/api/chat', {
+			const response = await fetch(CHAT_ENDPOINT, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ query: payload, department: null })
