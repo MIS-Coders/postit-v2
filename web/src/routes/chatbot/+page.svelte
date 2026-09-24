@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { marked } from 'marked';
 
+	import { CHAT_ENDPOINT } from '$lib/api';
 	import { Avatar, AvatarFallback } from '$lib/components/ui/avatar';
 	import { Button } from '$lib/components/ui/button';
 	import { Card } from '$lib/components/ui/card';
@@ -45,7 +46,7 @@
 		isLoading = true;
 
 		try {
-			const response = await fetch('http://localhost:5000/api/chat', {
+			const response = await fetch(CHAT_ENDPOINT, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
