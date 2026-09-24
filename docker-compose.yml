@@ -27,7 +27,7 @@ services:
     container_name: rag_flask_api
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "3018:5173"
     environment:
       - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD:-rag_password}@db:5432/${POSTGRES_DB:-rag_db}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
@@ -44,9 +44,9 @@ services:
     container_name: rag_svelte_web
     restart: unless-stopped
     ports:
-      - "3000:5173"
+      - "3017:5173"
     environment:
-      - PUBLIC_API_URL=http://api:5000
+      - PUBLIC_API_URL=http://api:3018
     depends_on:
       - api
     networks:
