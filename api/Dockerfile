@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY . .
 
 # Expose the Flask port
-EXPOSE 5000
+EXPOSE 3018
 
 # Use Gunicorn for production (adjust workers based on your host machine)
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--threads", "4", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:3018", "--workers", "4", "--threads", "4", "app:app"]
