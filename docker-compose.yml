@@ -30,6 +30,9 @@ services:
     ports:
       # host 3018 -> https://postit-ai.mahkotagroup.com (container tetap 5000)
       - "3018:5000"
+    volumes:
+      # PDF SOP untuk api/scripts/batch_embed.py (script membaca ./uploads relatif /app)
+      - ./storage/sop:/app/uploads:ro
     environment:
       - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-rag_db}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
@@ -48,6 +51,9 @@ services:
     ports:
       # host 3017 -> https://postit.mahkotagroup.com (dev server vite tetap 5173)
       - "3017:5173"
+    volumes:
+      # folder PDF SOP + sop-data.json; SOP_STORAGE_DIR=../storage/sop -> /storage/sop
+      - ./storage:/storage:ro
     environment:
       - ORIGIN=${ORIGIN:-https://postit.mahkotagroup.com}
       - PUBLIC_API_URL=${PUBLIC_API_URL:-https://postit-ai.mahkotagroup.com}

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 
-	import { departements, sopdocs, type TypeDoc } from '$lib/mock/sop';
+	import type { Departement, SopDoc, TypeDoc } from '$lib/sop';
 	import { ui } from '$lib/state/ui.svelte';
 	import { cn } from '$lib/utils';
 
@@ -9,10 +9,15 @@
 	import SopViewer from './sop-viewer.svelte';
 
 	// Satu komponen untuk SOP/IK dan SOP Formulir, bedanya hanya type_doc (PLAN §5.1).
-	let { type }: { type: TypeDoc } = $props();
+	interface Props {
+		type: TypeDoc;
+		departements: Departement[];
+		docs: SopDoc[];
+	}
+
+	let { type, departements, docs }: Props = $props();
 
 	const label = $derived(type === 'READ' ? 'SOP/IK' : 'SOP Formulir');
-	const docs = $derived(sopdocs.filter((d) => d.type_doc === type));
 
 	const selectedId = $derived(Number(page.url.searchParams.get('doc')) || null);
 	const initialPage = $derived(Number(page.url.searchParams.get('page')) || 1);

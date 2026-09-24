@@ -5,7 +5,7 @@
 	import RiFolder3Line from 'remixicon-svelte/icons/folder-3-line';
 	import RiFolderOpenLine from 'remixicon-svelte/icons/folder-open-line';
 
-	import type { Departement, SopDoc } from '$lib/mock/sop';
+	import type { Departement, SopDoc } from '$lib/sop';
 	import { cn } from '$lib/utils';
 
 	interface Props {
