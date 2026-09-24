@@ -181,9 +181,15 @@
 								]}
 							>
 								{#if msg.content}
-									<div class="prose prose-sm max-w-none dark:prose-invert">
-										{@html marked.parse(msg.content)}
-									</div>
+									{#if msg.role === 'assistant'}
+										<div class="prose prose-sm max-w-none dark:prose-invert">
+											{@html marked.parse(msg.content)}
+										</div>
+									{:else}
+										<div class="whitespace-pre-wrap">
+											{msg.content}
+										</div>
+									{/if}
 								{:else if isLoading && msg.role === 'assistant'}
 									<div class="flex items-center gap-2 text-muted-foreground">
 										<span class="animate-pulse">●</span>
