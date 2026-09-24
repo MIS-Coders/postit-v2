@@ -1,5 +1,7 @@
 <script lang="ts">
 	import SopBrowser from '$lib/components/sop/sop-browser.svelte';
+
+	let { data } = $props();
 </script>
 
-<SopBrowser type="FORM" />
+<SopBrowser type="FORM" departements={data.departements} docs={data.docs} />

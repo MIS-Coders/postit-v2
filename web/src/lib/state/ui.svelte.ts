@@ -1,4 +1,4 @@
-import type { SopDoc } from '$lib/mock/sop';
+import type { SopDoc } from '$lib/sop';
 
 // State UI yang dipakai bersama oleh shell (top bar, panel Tanya AI) dan halaman SOP.
 export const ui = $state({

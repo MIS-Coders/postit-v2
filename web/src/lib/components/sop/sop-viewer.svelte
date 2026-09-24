@@ -9,9 +9,11 @@
 	import RiSkipRightLine from 'remixicon-svelte/icons/skip-right-line';
 	import RiSparkling2Line from 'remixicon-svelte/icons/sparkling-2-line';
 
-	import type { Departement, SopDoc } from '$lib/mock/sop';
+	import { sopFileUrl, type Departement, type SopDoc } from '$lib/sop';
 	import { askAboutDoc } from '$lib/state/ui.svelte';
 	import { cn } from '$lib/utils';
+
+	import PdfCanvas from './pdf-canvas.svelte';
 
 	interface Props {
 		typeLabel: string;
@@ -25,19 +27,26 @@
 	let { typeLabel, doc, departement, initialPage = 1, canAskAi }: Props = $props();
 
 	let pageNo = $state(1);
+	let numPages = $state(0);
 	let notice = $state('');
 	let copied = $state(false);
 	let noticeTimer: ReturnType<typeof setTimeout> | undefined;
 
 	$effect(() => {
-		// reset halaman setiap ganti dokumen
-		pageNo = Math.min(Math.max(initialPage, 1), doc?.pages ?? 1);
+		// reset halaman setiap ganti dokumen; PdfCanvas membatasi ke jumlah halaman
+		void doc?.id;
+		pageNo = Math.max(initialPage, 1);
+	});
+
+	$effect(() => {
+		if (numPages && pageNo > numPages) pageNo = numPages;
 	});
 
 	const today = new Date().toISOString().slice(0, 10);
-	const expired = $derived(!!doc && doc.tgl_expired < today);
+	const expired = $derived(!!doc?.tgl_expired && doc.tgl_expired < today);
 
-	function fmt(date: string) {
+	function fmt(date: string | null) {
+		if (!date) return '-';
 		const [y, m, d] = date.split('-');
 		return `${d}/${m}/${y}`;
 	}
@@ -151,62 +160,49 @@
 				</div>
 			{/if}
 
-			<!-- viewer: lihat saja, tanpa download/print (PLAN §5.1). Nanti diganti canvas pdf.js. -->
+			<!-- viewer: lihat saja, tanpa download/print (PLAN §5.1) -->
 			<div class="mt-8 overflow-hidden rounded-2xl border bg-muted/40">
-				<div class="flex items-center justify-center border-b bg-background/60 px-3 py-2 sm:justify-between md:justify-center lg:justify-between">
-					<span class="hidden px-2 text-xs font-medium whitespace-nowrap text-muted-foreground sm:inline md:hidden lg:inline">PDF · lihat saja</span>
-					<div class="flex items-center gap-0.5">
-						<button type="button" class={navBtn} aria-label="Halaman pertama" disabled={pageNo === 1} onclick={() => (pageNo = 1)}>
-							<RiSkipLeftLine class="size-4" />
-						</button>
-						<button type="button" class={navBtn} aria-label="Halaman sebelumnya" disabled={pageNo === 1} onclick={() => pageNo--}>
-							<RiArrowLeftSLine class="size-4" />
-						</button>
-						<span class="min-w-16 text-center text-sm tabular-nums">{pageNo} / {doc.pages}</span>
-						<button type="button" class={navBtn} aria-label="Halaman berikutnya" disabled={pageNo === doc.pages} onclick={() => pageNo++}>
-							<RiArrowRightSLine class="size-4" />
-						</button>
-						<button type="button" class={navBtn} aria-label="Halaman terakhir" disabled={pageNo === doc.pages} onclick={() => (pageNo = doc.pages)}>
-							<RiSkipRightLine class="size-4" />
-						</button>
-					</div>
-				</div>
-
-				<div class="relative flex justify-center p-4 md:p-8" oncontextmenu={blockContextMenu} role="presentation">
-					<!-- placeholder halaman PDF -->
-					<div class="aspect-[1/1.414] w-full max-w-xl bg-white p-4 md:p-8 text-neutral-800 shadow-md select-none">
-						<table class="w-full border-collapse text-[11px]">
-							<tbody>
-								<tr>
-									<td rowspan="3" class="w-1/4 border border-neutral-400 p-2 text-center font-bold">LOGO</td>
-									<td rowspan="3" class="border border-neutral-400 p-2 text-center text-sm font-bold uppercase">
-										{doc.nama_dokumen}
-									</td>
-									<td class="w-1/4 border border-neutral-400 px-2 py-1">No: {doc.no_dokumen}</td>
-								</tr>
-								<tr><td class="border border-neutral-400 px-2 py-1">Rev: {doc.no_rev}</td></tr>
-								<tr><td class="border border-neutral-400 px-2 py-1">Hal: {pageNo} / {doc.pages}</td></tr>
-							</tbody>
-						</table>
-						<div class="mt-8 space-y-3">
-							{#each { length: 14 } as _, i (i)}
-								<div
-									class="h-2 rounded bg-neutral-200"
-									style="width: {60 + ((i * 37 + pageNo * 13) % 40)}%"
-								></div>
-							{/each}
+				{#if doc.has_file}
+					<div class="flex items-center justify-center border-b bg-background/60 px-3 py-2 sm:justify-between md:justify-center lg:justify-between">
+						<span class="hidden px-2 text-xs font-medium whitespace-nowrap text-muted-foreground sm:inline md:hidden lg:inline">PDF · lihat saja</span>
+						<div class="flex items-center gap-0.5">
+							<button type="button" class={navBtn} aria-label="Halaman pertama" disabled={pageNo <= 1} onclick={() => (pageNo = 1)}>
+								<RiSkipLeftLine class="size-4" />
+							</button>
+							<button type="button" class={navBtn} aria-label="Halaman sebelumnya" disabled={pageNo <= 1} onclick={() => pageNo--}>
+								<RiArrowLeftSLine class="size-4" />
+							</button>
+							<span class="min-w-16 text-center text-sm tabular-nums">{pageNo} / {numPages || '…'}</span>
+							<button type="button" class={navBtn} aria-label="Halaman berikutnya" disabled={pageNo >= numPages} onclick={() => pageNo++}>
+								<RiArrowRightSLine class="size-4" />
+							</button>
+							<button type="button" class={navBtn} aria-label="Halaman terakhir" disabled={pageNo >= numPages} onclick={() => (pageNo = numPages)}>
+								<RiSkipRightLine class="size-4" />
+							</button>
 						</div>
 					</div>
 
-					{#if notice}
-						<div
-							class="absolute top-6 left-1/2 -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-sm text-background shadow-lg"
-							role="alert"
-						>
-							{notice}
-						</div>
-					{/if}
-				</div>
+					<div class="relative flex justify-center p-3 select-none md:p-6" oncontextmenu={blockContextMenu} role="presentation">
+						<PdfCanvas src={sopFileUrl(doc.id)} {pageNo} bind:numPages class="max-w-3xl" />
+
+						{#if notice}
+							<div
+								class="absolute top-6 left-1/2 -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-center text-sm text-background shadow-lg"
+								role="alert"
+							>
+								{notice}
+							</div>
+						{/if}
+					</div>
+				{:else}
+					<div class="flex flex-col items-center gap-2 px-6 py-16 text-center">
+						<RiFileTextLine class="size-8 text-muted-foreground" />
+						<p class="font-medium">File PDF belum tersedia</p>
+						<p class="max-w-sm text-sm text-muted-foreground">
+							Dokumen ini tercatat, tapi filenya belum ada di server. Hubungi Management System.
+						</p>
+					</div>
+				{/if}
 			</div>
 		</div>
 	{/if}
