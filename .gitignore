@@ -27,3 +27,4 @@ uploads
 .pdf
 # Backup file konfigurasi (dibuat saat perubahan deploy)
 *.bak
+storage/
