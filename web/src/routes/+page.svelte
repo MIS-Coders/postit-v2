@@ -46,11 +46,7 @@
 		isLoading = true;
 
 		try {
-<<<<<<< HEAD
-			const response = await fetch('http://localhost:3018/api/chat', {
-=======
 			const response = await fetch(CHAT_ENDPOINT, {
->>>>>>> 5ff74c0def1f418cc2084318380760f844481006
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
