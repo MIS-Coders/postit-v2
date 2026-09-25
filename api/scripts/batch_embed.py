@@ -2,11 +2,14 @@ import os
 import hashlib
 
 import pymupdf4llm
+import voyageai
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
+from transformers import AutoTokenizer
 
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_voyageai import VoyageAIEmbeddings
 from langchain_postgres.vectorstores import PGVector
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -20,17 +23,32 @@ load_dotenv()
 # 1. Initialize Gemini Embeddings
 # ============================================================
 
-api_key = os.getenv("GEMINI_API_KEY")
+# api_key = os.getenv("GEMINI_API_KEY")
 
-if not api_key:
-    raise ValueError("GEMINI_API_KEY belum tersedia!")
+# if not api_key:
+#     raise ValueError("GEMINI_API_KEY belum tersedia!")
 
-embeddings = GoogleGenerativeAIEmbeddings(
-    model="gemini-embedding-001",
-    google_api_key=api_key,
-    output_dimensionality=768,
+# embeddings = GoogleGenerativeAIEmbeddings(
+#     model="gemini-embedding-001",
+#     google_api_key=api_key,
+#     output_dimensionality=768,
+# )
+
+# ============================================================
+# 1. Initialize Voyage Embeddings
+# ============================================================
+voyage_api_key = os.getenv("VOYAGE_API_KEY")
+
+if not voyage_api_key:
+    raise ValueError(
+        "VOYAGE_API_KEY belum tersedia!"
+    )
+
+embeddings = VoyageAIEmbeddings(
+    model="voyage-4-large",
+    voyage_api_key=voyage_api_key,
+    output_dimension=1024,
 )
-
 
 # ============================================================
 # 2. PostgreSQL connection
@@ -48,7 +66,7 @@ if not connection_string:
 
 vector_store = PGVector(
     embeddings=embeddings,
-    collection_name="sop_ik_documents",
+    collection_name="sop_ik_documents_voyage",
     connection=connection_string,
     use_jsonb=True,
 )
@@ -63,6 +81,67 @@ text_splitter = RecursiveCharacterTextSplitter(
     chunk_overlap=200,
 )
 
+def analyze_chunks(docs):
+    """
+    Mengukur jumlah token aktual setiap chunk
+    menggunakan tokenizer Voyage-4.
+    """
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        "voyageai/voyage-4"
+    )
+
+    token_counts = []
+
+    for doc in docs:
+        tokens = tokenizer.encode(
+            doc.page_content,
+            add_special_tokens=False,
+        )
+
+        token_counts.append(len(tokens))
+
+    if not token_counts:
+        print("Tidak ada chunk untuk dianalisis.")
+        return
+
+    total_tokens = sum(token_counts)
+
+    print()
+    print("=" * 60)
+    print("CHUNK TOKEN ANALYSIS")
+    print("=" * 60)
+
+    print(f"Total chunks   : {len(token_counts)}")
+    print(f"Total tokens   : {total_tokens:,}")
+    print(
+        f"Average tokens : "
+        f"{total_tokens / len(token_counts):.2f}"
+    )
+    print(f"Minimum tokens : {min(token_counts)}")
+    print(f"Maximum tokens : {max(token_counts)}")
+
+    print("=" * 60)
+
+    print()
+    print("10 LARGEST CHUNKS")
+    print("-" * 60)
+
+    largest = sorted(
+        enumerate(token_counts),
+        key=lambda x: x[1],
+        reverse=True,
+    )[:10]
+
+    for index, count in largest:
+        print(
+            f"Chunk {index:4d} : "
+            f"{count:,} tokens"
+        )
+
+    print("=" * 60)
+
+    return token_counts
 
 # ============================================================
 # 5. Calculate SHA-256 file hash
@@ -145,22 +224,27 @@ def get_existing_files():
     sehingga file dengan nama sama tetapi department berbeda
     tidak dianggap sebagai file yang sama.
     """
-
+    COLLECTION_NAME = "sop_ik_documents_voyage"
+    
     engine = create_engine(connection_string)
 
     query = text("""
         SELECT DISTINCT
-            cmetadata->>'source' AS source,
-            cmetadata->>'file_hash' AS file_hash,
-            cmetadata->>'department' AS department
-        FROM langchain_pg_embedding
-        WHERE cmetadata->>'source' IS NOT NULL
+            e.cmetadata->>'source' AS source,
+            e.cmetadata->>'file_hash' AS file_hash,
+            e.cmetadata->>'department' AS department
+        FROM langchain_pg_embedding e
+        JOIN langchain_pg_collection c ON e.collection_id = c.uuid
+        WHERE c.name = :collection_name AND e.cmetadata->>'source' IS NOT NULL
     """)
 
     existing_files = {}
 
     with engine.connect() as connection:
-        results = connection.execute(query)
+        results = connection.execute(
+            query,
+            {"collection_name": COLLECTION_NAME}
+        )
 
         for row in results:
             source = row.source
@@ -389,9 +473,14 @@ def migrate_pdfs(pdf_directory: str):
             # =================================================
             # Insert embeddings
             # =================================================
-
+            analyze_chunks(docs_to_insert)
+            
             if docs_to_insert:
+                analyze_chunks(docs_to_insert)
 
+                # STOP sementara untuk testing
+                continue
+            
                 vector_store.add_documents(
                     docs_to_insert
                 )
