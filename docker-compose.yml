@@ -46,10 +46,10 @@ services:
     container_name: rag_svelte_web
     restart: unless-stopped
     ports:
-      # host 3017 -> https://postit.mahkotagroup.com (dev server vite tetap 5173)
+      # host 3017 -> https://postit-v2.mahkotagroup.com (dev server vite tetap 5173)
       - "3017:5173"
     environment:
-      - ORIGIN=${ORIGIN:-https://postit.mahkotagroup.com}
+      - ORIGIN=${ORIGIN:-https://postit-v2.mahkotagroup.com}
       - PUBLIC_API_URL=${PUBLIC_API_URL:-https://postit-ai.mahkotagroup.com}
       - DATABASE_URL=postgres://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-rag_db}
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
