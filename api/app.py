@@ -3,6 +3,7 @@ from flask import Flask, request, Response, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_voyageai import VoyageAIEmbeddings
 from langchain_postgres.vectorstores import PGVector
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
@@ -16,11 +17,25 @@ api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
     raise ValueError("GEMINI_API_KEY is missing!")
 
-embeddings = GoogleGenerativeAIEmbeddings(
-    model="models/gemini-embedding-001",
-    google_api_key=api_key,
-    output_dimensionality=768,
+# embeddings = GoogleGenerativeAIEmbeddings(
+#     model="models/gemini-embedding-001",
+#     google_api_key=api_key,
+#     output_dimensionality=768,
+# )
+
+voyage_api_key = os.getenv("VOYAGE_API_KEY")
+
+if not voyage_api_key:
+    raise ValueError(
+        "VOYAGE_API_KEY belum tersedia!"
+    )
+
+embeddings = VoyageAIEmbeddings(
+    model="voyage-4-large",
+    voyage_api_key=voyage_api_key,
+    output_dimension=1024,
 )
+
 
 # 2. Vector Store Connection
 connection_string = os.getenv("DATABASE_URL")
@@ -29,7 +44,7 @@ if not connection_string:
 
 vector_store = PGVector(
     embeddings=embeddings,
-    collection_name="sop_ik_documents",
+    collection_name="sop_ik_documents_voyage",
     connection=connection_string,
     use_jsonb=True,
 )
