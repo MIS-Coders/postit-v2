@@ -473,8 +473,6 @@ def migrate_pdfs(pdf_directory: str):
             # =================================================
             # Insert embeddings
             # =================================================
-            analyze_chunks(docs_to_insert)
-            
             if docs_to_insert:
                 analyze_chunks(docs_to_insert)
 
