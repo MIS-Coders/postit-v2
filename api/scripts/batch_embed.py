@@ -474,10 +474,11 @@ def migrate_pdfs(pdf_directory: str):
             # Insert embeddings
             # =================================================
             if docs_to_insert:
-                analyze_chunks(docs_to_insert)
+                # KODE DIBAWAH DAPAT DIAKTIFKAN JIKA INGIN ANALYSIS CHUNK TOKENS
+                # analyze_chunks(docs_to_insert)
 
-                # STOP sementara untuk testing
-                continue
+                # # STOP sementara untuk testing
+                # continue
             
                 vector_store.add_documents(
                     docs_to_insert
