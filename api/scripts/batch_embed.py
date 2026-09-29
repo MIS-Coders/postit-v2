@@ -1,5 +1,6 @@
 import os
 import hashlib
+from time import time
 
 import pymupdf4llm
 import voyageai
@@ -144,6 +145,21 @@ def analyze_chunks(docs):
     return token_counts
 
 # ============================================================
+# Count Tokens
+# ============================================================
+tokenizer = AutoTokenizer.from_pretrained(
+    "voyageai/voyage-4-large"
+)
+
+def count_tokens(text: str) -> int:
+    return len(
+        tokenizer.encode(
+            text,
+            add_special_tokens=False,
+        )
+    )
+
+# ============================================================
 # 5. Calculate SHA-256 file hash
 # ============================================================
 
@@ -271,14 +287,20 @@ def delete_file_embeddings(source: str):
     engine = create_engine(connection_string)
 
     query = text("""
-        DELETE FROM langchain_pg_embedding
-        WHERE cmetadata->>'source' = :source
+        DELETE FROM langchain_pg_embedding e 
+        USING langchain_pg_collection c
+        WHERE e.collection_id = c.uuid
+        AND c.name = :collection_name
+        AND e.cmetadata->>'source' = :source
     """)
 
     with engine.begin() as connection:
         result = connection.execute(
             query,
-            {"source": source},
+            {
+                "collection_name": "sop_ik_documents_voyage",
+                "source": source,
+            },
         )
 
     print(
@@ -286,6 +308,117 @@ def delete_file_embeddings(source: str):
         f"for: {source}"
     )
 
+# ============================================================
+# Token Aware Batching
+# ============================================================
+TPM_LIMIT = 10_000
+SAFE_TPM_LIMIT = 9_000
+RATE_LIMIT_WINDOW = 60  # seconds
+
+def create_token_batches(docs, max_tokens=SAFE_TPM_LIMIT):
+    batches = []
+    current_batch = []
+    current_tokens = 0
+
+    for doc in docs:
+
+        token_count = count_tokens(
+            doc.page_content
+        )
+
+        # Satu chunk sendiri terlalu besar
+        if token_count > max_tokens:
+            raise ValueError(
+                f"Chunk terlalu besar: "
+                f"{token_count:,} tokens"
+            )
+
+        if (
+            current_batch
+            and current_tokens + token_count > max_tokens
+        ):
+            batches.append(current_batch)
+
+            current_batch = []
+            current_tokens = 0
+
+        current_batch.append(doc)
+        current_tokens += token_count
+
+    if current_batch:
+        batches.append(current_batch)
+
+    return batches
+
+# ============================================================
+# Embedding per batch
+# ============================================================
+def embed_documents_in_batches(docs):
+    batches = create_token_batches(docs)
+
+    print()
+    print("=" * 60)
+    print("TOKEN-AWARE EMBEDDING")
+    print("=" * 60)
+
+    print(
+        f"Total chunks : {len(docs)}"
+    )
+
+    print(
+        f"Total batches: {len(batches)}"
+    )
+
+    print(
+        f"Safe TPM     : {SAFE_TPM_LIMIT:,}"
+    )
+
+    print("=" * 60)
+
+    for batch_index, (
+        batch_docs,
+        batch_tokens,
+    ) in enumerate(batches, start=1):
+
+        print()
+        print(
+            f"Batch {batch_index}/{len(batches)}"
+        )
+
+        print(
+            f"Chunks : {len(batch_docs)}"
+        )
+
+        print(
+            f"Tokens : {batch_tokens:,}"
+        )
+
+        print("-" * 60)
+
+        vector_store.add_documents(
+            batch_docs
+        )
+
+        print(
+            f"✓ Batch {batch_index} berhasil "
+            f"disimpan ke PostgreSQL."
+        )
+
+        # Jangan sleep setelah batch terakhir
+        if batch_index < len(batches):
+
+            print(
+                "Menunggu rate-limit window..."
+            )
+
+            time.sleep(
+                RATE_LIMIT_WINDOW
+            )
+
+    print()
+    print(
+        "✓ Semua batch berhasil di-embed."
+    )
 
 # ============================================================
 # 9. Process PDF files recursively
@@ -480,9 +613,11 @@ def migrate_pdfs(pdf_directory: str):
                 # # STOP sementara untuk testing
                 # continue
             
-                vector_store.add_documents(
-                    docs_to_insert
-                )
+                # vector_store.add_documents(
+                #     docs_to_insert
+                # )
+                
+                embed_documents_in_batches(docs_to_insert)
 
                 total_new_chunks += len(
                     docs_to_insert
