@@ -1,6 +1,6 @@
 import os
 import hashlib
-from time import time
+import time
 
 import pymupdf4llm
 import voyageai
@@ -337,7 +337,9 @@ def create_token_batches(docs, max_tokens=SAFE_TPM_LIMIT):
             current_batch
             and current_tokens + token_count > max_tokens
         ):
-            batches.append(current_batch)
+            batches.append(
+                (current_batch, current_tokens)
+            )
 
             current_batch = []
             current_tokens = 0
@@ -346,7 +348,7 @@ def create_token_batches(docs, max_tokens=SAFE_TPM_LIMIT):
         current_tokens += token_count
 
     if current_batch:
-        batches.append(current_batch)
+        batches.append((current_batch, current_tokens))
 
     return batches
 
