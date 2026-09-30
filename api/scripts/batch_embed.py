@@ -85,11 +85,11 @@ text_splitter = RecursiveCharacterTextSplitter(
 def analyze_chunks(docs):
     """
     Mengukur jumlah token aktual setiap chunk
-    menggunakan tokenizer Voyage-4.
+    menggunakan tokenizer Voyage-4-Large.
     """
 
     tokenizer = AutoTokenizer.from_pretrained(
-        "voyageai/voyage-4"
+        "voyageai/voyage-4-large"
     )
 
     token_counts = []
