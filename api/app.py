@@ -78,6 +78,85 @@ def format_docs(docs):
     return "\n\n".join(formatted)
 
 # ============================================================
+# Test Endpoint
+# ============================================================
+# @app.route("/api/debug-retrieval", methods=["POST"])
+# def debug_retrieval():
+#     try:
+#         data = request.get_json() or {}
+
+#         user_query = data.get("query")
+#         department_filter = data.get("department")
+
+#         if not user_query:
+#             return jsonify({"error": "Query is required"}), 400
+
+#         if department_filter == "All":
+#             department_filter = None
+
+#         print()
+#         print("=" * 60, flush=True)
+#         print("DEBUG RETRIEVAL", flush=True)
+#         print("=" * 60, flush=True)
+#         print("Query      :", user_query, flush=True)
+#         print("Department :", department_filter, flush=True)
+
+#         docs = vector_store.similarity_search(
+#             user_query,
+#             k=3,
+#             filter=(
+#                 {"department": department_filter}
+#                 if department_filter
+#                 else None
+#             ),
+#         )
+
+#         print("Documents  :", len(docs), flush=True)
+#         print("-" * 60, flush=True)
+
+#         results = []
+
+#         for i, doc in enumerate(docs, start=1):
+#             print(f"--- DOCUMENT {i} ---", flush=True)
+#             print("Source    :", doc.metadata.get("source"), flush=True)
+#             print("Department:", doc.metadata.get("department"), flush=True)
+#             print("Pages     :", doc.metadata.get("pages"), flush=True)
+#             print("Chunk     :", doc.metadata.get("chunk"), flush=True)
+#             print("Content   :", doc.page_content[:500], flush=True)
+
+#             results.append({
+#                 "source": doc.metadata.get("source"),
+#                 "department": doc.metadata.get("department"),
+#                 "pages": doc.metadata.get("pages"),
+#                 "chunk": doc.metadata.get("chunk"),
+#                 "content": doc.page_content,
+#             })
+
+#         print("=" * 60, flush=True)
+
+#         return jsonify({
+#             "query": user_query,
+#             "department": department_filter,
+#             "documents_found": len(docs),
+#             "results": results,
+#         })
+
+#     except Exception as e:
+#         import traceback
+
+#         print()
+#         print("=" * 60, flush=True)
+#         print("DEBUG RETRIEVAL ERROR", flush=True)
+#         print("=" * 60, flush=True)
+#         traceback.print_exc()
+#         print("=" * 60, flush=True)
+
+#         return jsonify({
+#             "error": str(e),
+#             "type": type(e).__name__,
+#         }), 500
+
+# ============================================================
 # 4. Chat Endpoint
 # ============================================================
 @app.route("/api/chat", methods=["POST"])
@@ -88,6 +167,10 @@ def chat():
 
     if not user_query:
         return jsonify({"error": "Query is required"}), 400
+    
+    # "All" berarti tidak menggunakan filter department
+    if department_filter == "All":
+        department_filter = None
 
     # Build search parameters with optional metadata filtering, fetch the top 3 most relevant text chunks
     search_kwargs = {"k": 3}
@@ -95,7 +178,7 @@ def chat():
         search_kwargs["filter"] = {"department": department_filter}
 
     retriever = vector_store.as_retriever(search_kwargs=search_kwargs)
-
+    
     # Construct the RAG Chain
     rag_chain = (
         {"context": retriever | format_docs, "question": RunnablePassthrough()}

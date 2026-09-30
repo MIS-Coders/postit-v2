@@ -56,13 +56,15 @@ services:
       # folder PDF SOP + sop-data.json; SOP_STORAGE_DIR=../storage/sop -> /storage/sop
       - ./storage:/storage:ro
     environment:
-      - ORIGIN=${ORIGIN:-https://postit.mahkotagroup.com}
-      - PUBLIC_API_URL=${PUBLIC_API_URL:-https://postit-ai.mahkotagroup.com}
-      - DATABASE_URL=postgres://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-rag_db}
-      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
-      - SOP_STORAGE_DIR=${SOP_STORAGE_DIR:-../storage/sop}
-      - HOST=0.0.0.0
-      - PORT=5173
+      # - ORIGIN=${ORIGIN:-https://postit.mahkotagroup.com}
+      # - PUBLIC_API_URL=${PUBLIC_API_URL:-https://postit-ai.mahkotagroup.com}
+      # - DATABASE_URL=postgres://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-rag_db}
+      # - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      # - SOP_STORAGE_DIR=${SOP_STORAGE_DIR:-../storage/sop}
+      # - HOST=0.0.0.0
+      # - PORT=5173
+
+      - PUBLIC_API_URL=${DEV_PORT} # untuk local development, web container -> api container (localhost:3018)
     depends_on:
       - api
     networks:
