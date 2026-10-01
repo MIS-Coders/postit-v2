@@ -161,6 +161,16 @@ def format_docs(docs):
 # ============================================================
 @app.route("/api/chat", methods=["POST"])
 def chat():
+    # Bearer token check 
+    auth_header = request.headers.get("Authorization")
+    super_secret = os.getenv("APP_SECRET_TOKEN")
+    
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Invalid or missing authorization header"}), 401
+
+    if auth_header != f"Bearer {super_secret}":
+        return jsonify({"error": "Unauthorized"}), 401
+
     data = request.get_json() or {}
     user_query = data.get("query")
     department_filter = data.get("department")  # Optional metadata filter
