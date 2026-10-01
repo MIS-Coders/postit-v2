@@ -63,8 +63,8 @@ services:
       # - SOP_STORAGE_DIR=${SOP_STORAGE_DIR:-../storage/sop}
       # - HOST=0.0.0.0
       # - PORT=5173
-
-      - PUBLIC_API_URL=${DEV_PORT} # untuk local development, web container -> api container (localhost:3018)
+      - APP_SECRET_TOKEN=${APP_SECRET_TOKEN}
+      - PUBLIC_API_URL=${PUBLIC_API_URL} # untuk local development, web container -> api container (localhost:3018)
     depends_on:
       - api
     networks:
