@@ -52,18 +52,6 @@ vector_store = PGVector(
 # 3. LLM and prompt setup
 llm = ChatGoogleGenerativeAI(model='gemini-3.1-flash-lite', google_api_key=api_key, temperature=0.2)
 
-system_prompt = (
-    "Anda adalah asisten virtual SOP (Standard Operating Procedure) dan IK (Instruksi Kerja).\n"
-    "Jawablah pertanyaan pengguna secara akurat berdasarkan konteks dokumen yang diberikan.\n"
-    "Jika informasi tidak ditemukan dalam konteks, katakan dengan jelas bahwa Anda tidak menemukan jawabannya di dokumen SOP/IK.\n"
-    "Sebutkan nama dokumen sumber (source), departemen, dan nomor halaman jika tersedia dalam konteks.\n\n"
-    "Konteks Dokumen:\n{context}"
-)
-prompt = ChatPromptTemplate.from_messages([
-    ("system", system_prompt),
-    ("human", "{question}"),
-])
-
 def format_docs(docs):
     """Formats retrieved chunks with clear source, department, and page metadata."""
     formatted = []
@@ -76,85 +64,6 @@ def format_docs(docs):
         header = f"--- [Sumber: {source} | Dept: {dept} | {page_str}] ---"
         formatted.append(f"{header}\n{doc.page_content}")
     return "\n\n".join(formatted)
-
-# ============================================================
-# Test Endpoint
-# ============================================================
-# @app.route("/api/debug-retrieval", methods=["POST"])
-# def debug_retrieval():
-#     try:
-#         data = request.get_json() or {}
-
-#         user_query = data.get("query")
-#         department_filter = data.get("department")
-
-#         if not user_query:
-#             return jsonify({"error": "Query is required"}), 400
-
-#         if department_filter == "All":
-#             department_filter = None
-
-#         print()
-#         print("=" * 60, flush=True)
-#         print("DEBUG RETRIEVAL", flush=True)
-#         print("=" * 60, flush=True)
-#         print("Query      :", user_query, flush=True)
-#         print("Department :", department_filter, flush=True)
-
-#         docs = vector_store.similarity_search(
-#             user_query,
-#             k=3,
-#             filter=(
-#                 {"department": department_filter}
-#                 if department_filter
-#                 else None
-#             ),
-#         )
-
-#         print("Documents  :", len(docs), flush=True)
-#         print("-" * 60, flush=True)
-
-#         results = []
-
-#         for i, doc in enumerate(docs, start=1):
-#             print(f"--- DOCUMENT {i} ---", flush=True)
-#             print("Source    :", doc.metadata.get("source"), flush=True)
-#             print("Department:", doc.metadata.get("department"), flush=True)
-#             print("Pages     :", doc.metadata.get("pages"), flush=True)
-#             print("Chunk     :", doc.metadata.get("chunk"), flush=True)
-#             print("Content   :", doc.page_content[:500], flush=True)
-
-#             results.append({
-#                 "source": doc.metadata.get("source"),
-#                 "department": doc.metadata.get("department"),
-#                 "pages": doc.metadata.get("pages"),
-#                 "chunk": doc.metadata.get("chunk"),
-#                 "content": doc.page_content,
-#             })
-
-#         print("=" * 60, flush=True)
-
-#         return jsonify({
-#             "query": user_query,
-#             "department": department_filter,
-#             "documents_found": len(docs),
-#             "results": results,
-#         })
-
-#     except Exception as e:
-#         import traceback
-
-#         print()
-#         print("=" * 60, flush=True)
-#         print("DEBUG RETRIEVAL ERROR", flush=True)
-#         print("=" * 60, flush=True)
-#         traceback.print_exc()
-#         print("=" * 60, flush=True)
-
-#         return jsonify({
-#             "error": str(e),
-#             "type": type(e).__name__,
-#         }), 500
 
 # ============================================================
 # 4. Chat Endpoint
@@ -174,7 +83,9 @@ def chat():
     data = request.get_json() or {}
     user_query = data.get("query")
     department_filter = data.get("department")  # Optional metadata filter
-
+    
+    chat_mode = data.get("mode", "explain")
+    
     if not user_query:
         return jsonify({"error": "Query is required"}), 400
     
@@ -188,6 +99,29 @@ def chat():
         search_kwargs["filter"] = {"department": department_filter}
 
     retriever = vector_store.as_retriever(search_kwargs=search_kwargs)
+    
+    # define chat mode
+    if chat_mode == "reference":
+        system_prompt = (
+            "Anda adalah asisten pencari referensi SOP dan IK.\n"
+            "Tugas Anda HANYA mencari dan menyebutkan Nama Dokumen, Departemen, dan Nomor Halaman yang terkait dengan pertanyaan pengguna.\n"
+            "DILARANG KERAS menjelaskan, merangkum, atau menjabarkan isi atau langkah-langkah dari dokumen tersebut. Cukup berikan referensi lokasinya saja dalam bentuk poin-poin singkat.\n"
+            "Jika informasi tidak ditemukan, katakan 'Referensi tidak ditemukan.'\n\n"
+            "Konteks Dokumen:\n{context}"
+        )
+    else:
+        system_prompt = (
+            "Anda adalah asisten virtual SOP (Standard Operating Procedure) dan IK (Instruksi Kerja).\n"
+            "Jawablah pertanyaan pengguna secara akurat berdasarkan konteks dokumen yang diberikan.\n"
+            "Jika informasi tidak ditemukan dalam konteks, katakan dengan jelas bahwa Anda tidak menemukan jawabannya di dokumen SOP/IK.\n"
+            "Sebutkan nama dokumen sumber (source), departemen, dan nomor halaman jika tersedia dalam konteks.\n\n"
+            "Konteks Dokumen:\n{context}"
+        )
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("human", "{question}"),
+    ])
     
     # Construct the RAG Chain
     rag_chain = (
