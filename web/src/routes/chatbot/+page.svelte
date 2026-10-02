@@ -23,6 +23,7 @@
 	let messages = $state<Message[]>([]);
 	let query = $state('');
 	let selectedDepartment = $state('');
+	let chatMode = $state('explain'); // Default chat mode
 	let isLoading = $state(false);
 
 	const departments = ['All', 'HCM', 'MIS'];
@@ -52,7 +53,8 @@
 				},
 				body: JSON.stringify({
 					query: userMessage,
-					department: selectedDepartment === 'All' ? null : selectedDepartment || null
+					department: selectedDepartment === 'All' ? null : selectedDepartment || null,
+					mode: chatMode
 				})
 			});
 
@@ -107,6 +109,23 @@
 						Knowledge Base
 					</p>
 				</div>
+			</div>
+
+			<!-- Mode Dropdown -->
+			<div class="w-48">
+				<Select
+					type="single"
+					bind:value={chatMode}
+					disabled={isLoading}
+				>
+					<SelectTrigger>
+						<SelectValue placeholder="Pilih Mode" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="explain">📝 Penjelasan Detail</SelectItem>
+						<SelectItem value="reference">🔍 Hanya Cari Referensi</SelectItem>
+					</SelectContent>
+				</Select>
 			</div>
 
 			<div class="w-40">
