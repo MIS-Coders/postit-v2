@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { marked } from 'marked';
+	import { tick } from 'svelte';
 
 	import { Avatar, AvatarFallback } from '$lib/components/ui/avatar';
 	import { Button } from '$lib/components/ui/button';
@@ -26,7 +27,18 @@
 	let chatMode = $state('explain'); // Default chat mode
 	let isLoading = $state(false);
 
+	// Elemen anchor untuk auto-scroll
+    let scrollAnchor: HTMLDivElement | undefined = $state();
+
 	const departments = ['All', 'HCM', 'MIS'];
+
+	// Fungsi untuk menggulir layar otomatis ke bawah
+    async function scrollToBottom() {
+        await tick(); // Tunggu hingga Svelte selesai memperbarui DOM HTML
+        if (scrollAnchor) {
+            scrollAnchor.scrollIntoView({ behavior: 'auto', block: 'end' });
+        }
+    }
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
@@ -38,10 +50,12 @@
 
 		// Add user message
 		messages = [...messages, { role: 'user', content: userMessage }];
+		scrollToBottom();
 
 		// Add empty assistant message for streaming
 		messages = [...messages, { role: 'assistant', content: '' }];
 		const assistantIndex = messages.length - 1;
+		scrollToBottom();
 
 		isLoading = true;
 
@@ -78,6 +92,8 @@
 
 				// Trigger Svelte reactivity
 				messages = [...messages];
+
+				scrollToBottom();
 			}
 		} catch (error: unknown) {
 			const message =
@@ -85,6 +101,7 @@
 
 			messages[assistantIndex].content = `Error: ${message}`;
 			messages = [...messages];
+			scrollToBottom();
 		} finally {
 			isLoading = false;
 		}
@@ -225,6 +242,8 @@
 						</div>
 					{/each}
 				{/if}
+
+				<div bind:this={scrollAnchor} class="h-1 w-full mt-2"></div>
 			</main>
 		</ScrollArea>
 
