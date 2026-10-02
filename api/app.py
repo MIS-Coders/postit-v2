@@ -89,6 +89,12 @@ def chat():
     if not user_query:
         return jsonify({"error": "Query is required"}), 400
     
+    # Mapping Departement
+    DEPARTMENT_MAPPING = {
+        "HCM": "HCM - Human Capital Management",
+        "MIS": "MIS - Management Information System"
+    }
+    
     # "All" berarti tidak menggunakan filter department
     if department_filter == "All":
         department_filter = None
@@ -96,7 +102,8 @@ def chat():
     # Build search parameters with optional metadata filtering, fetch the top 3 most relevant text chunks
     search_kwargs = {"k": 3}
     if department_filter:
-        search_kwargs["filter"] = {"department": department_filter}
+        db_department_name = DEPARTMENT_MAPPING.get(department_filter, department_filter)
+        search_kwargs["filter"] = {"department": db_department_name}
 
     retriever = vector_store.as_retriever(search_kwargs=search_kwargs)
     
