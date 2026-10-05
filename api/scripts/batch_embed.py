@@ -406,16 +406,13 @@ def embed_documents_in_batches(docs):
             f"disimpan ke PostgreSQL."
         )
 
-        # Jangan sleep setelah batch terakhir
-        if batch_index < len(batches):
+        print(
+            "Menunggu rate-limit window..."
+        )
 
-            print(
-                "Menunggu rate-limit window..."
-            )
-
-            time.sleep(
-                RATE_LIMIT_WINDOW
-            )
+        time.sleep(
+            RATE_LIMIT_WINDOW
+        )
 
     print()
     print(
