@@ -30,7 +30,11 @@
 	// Elemen anchor untuk auto-scroll
     let scrollAnchor: HTMLDivElement | undefined = $state();
 
-	const departments = ['All', 'HCM', 'MIS'];
+	const departments = ['All', 'MH', 'MIS', 'ACC & TAX', 'HCM', 'FNC', 'SSL', 'ISO 37001:2016 (SMAP)',
+		'CS', 'MKT', 'MS', 'Internal Audit', 'IK Proses PKS', 'Estate', 'ISO/SMK3/ISPO', 'Storage Tank',
+		'Document Control', 'IK-Mutu', 'IK-Lingkungan', 'IK-K3', 'Refinery', 'IK KCP', 'IK Refinery',
+		'IK Fraksinasi', 'Halal', 'IK Biogas', 'IK FOF Plant', 'IK Solvent', 'IK PELLETIZING PLANT'
+	];
 
 	// Fungsi untuk menggulir layar otomatis ke bawah
     async function scrollToBottom() {

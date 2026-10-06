@@ -91,8 +91,34 @@ def chat():
     
     # Mapping Departement
     DEPARTMENT_MAPPING = {
+        "MH": "MH - Material Handling",
+        "MIS": "MIS - Management Information System",
+        "ACC & TAX": "ACC & TAX - Accounting & TAX",
         "HCM": "HCM - Human Capital Management",
-        "MIS": "MIS - Management Information System"
+        "FNC": "FNC - Finance",
+        "SSL": "SSL- Social, Secure & License",
+        "ISO 37001:2016 (SMAP)": "ISO 37001-2016(SMAP)",
+        "CS": "CS - Corporate Secretariat",
+        "MKT": "MKT - Marketing",
+        "MS": "MS - Management System",
+        "Internal Audit": "AUD - Internal Audit",
+        "IK Proses PKS": "IK Proses PKS",
+        "Estate": "Estate",
+        "ISO/SMK3/ISPO": "ISO-SMK3-ISPO",
+        "Storage Tank": "Storage Tank",
+        "Document Control": "Document Control",
+        "IK-Mutu": "IK-Mutu",
+        "IK-Lingkungan": "IK-Lingkungan",
+        "IK-K3": "IK-K3",
+        "Refinery": "Refinery",
+        "IK KCP": "IK KCP",
+        "IK Refinery": "IK Refinery",
+        "IK Fraksinasi": "IK Fraksinasi",
+        "Halal": "Halal",
+        "IK Biogas": "IK Biogas",
+        "IK FOF Plant": "IK FOF Plant",
+        "IK Solvent": "IK Solvent",
+        "IK PELLETIZING PLANT": "IK PELLETIZING PLANT"
     }
     
     # "All" berarti tidak menggunakan filter department
