@@ -29,8 +29,8 @@ services:
     container_name: rag_flask_api
     restart: unless-stopped
     ports:
-      # host 3018 -> https://postit-ai.mahkotagroup.com (container 3018, sesuai Dockerfile)
-      - "3018:3018"
+      # host 3018 -> https://postit-ai.mahkotagroup.com (container 5000, sesuai gunicorn di api/Dockerfile)
+      - "3018:5000"
     volumes:
       # PDF SOP untuk api/scripts/batch_embed.py (script membaca ./uploads relatif /app)
       - ./storage/sop:/app/uploads:ro
