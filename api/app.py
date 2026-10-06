@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 from threading import Lock, Thread
@@ -10,7 +11,6 @@ from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmb
 from langchain_voyageai import VoyageAIEmbeddings
 from langchain_postgres.vectorstores import PGVector
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
 from sqlalchemy import create_engine, text
 
 from embed_service import embed_pdf
@@ -170,6 +170,30 @@ def format_docs(docs):
         formatted.append(f"{header}\n{doc.page_content}")
     return "\n\n".join(formatted)
 
+
+def collect_sources(docs):
+    """Daftar dokumen sumber (unik) beserta halamannya, dikirim ke web untuk dibuatkan link."""
+    sources = {}
+    for doc in docs:
+        source = doc.metadata.get("source")
+        if not source:
+            continue
+        entry = sources.setdefault(
+            source,
+            {
+                "source": source,
+                "department": doc.metadata.get("department"),
+                "sop_doc_id": doc.metadata.get("sop_doc_id"),
+                "pages": [],
+            },
+        )
+        for page in doc.metadata.get("pages", []):
+            if page not in entry["pages"]:
+                entry["pages"].append(page)
+    for entry in sources.values():
+        entry["pages"].sort()
+    return list(sources.values())
+
 # ============================================================
 # 4. Chat Endpoint
 # ============================================================
@@ -229,15 +253,14 @@ def chat():
         ("human", "{question}"),
     ])
     
+    # Retrieval dijalankan lebih dulu supaya daftar sumbernya bisa dikirim lewat header
+    docs = retriever.invoke(user_query)
+
     # Construct the RAG Chain
-    rag_chain = (
-        {"context": retriever | format_docs, "question": RunnablePassthrough()}
-        | prompt
-        | llm
-    )
+    rag_chain = prompt | llm
 
     def generate():
-        for chunk in rag_chain.stream(user_query):
+        for chunk in rag_chain.stream({"context": format_docs(docs), "question": user_query}):
             # 1. Extract the actual text string from the chunk
             text_value = ""
             
@@ -253,7 +276,10 @@ def chat():
             if text_value:
                 yield text_value.encode('utf-8')
 
-    return Response(generate(), mimetype="text/plain; charset=utf-8")
+    response = Response(generate(), mimetype="text/plain; charset=utf-8")
+    # json.dumps meng-escape non-ASCII, jadi aman dipakai sebagai nilai header
+    response.headers["X-Chat-Sources"] = json.dumps(collect_sources(docs))
+    return response
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=3018)
