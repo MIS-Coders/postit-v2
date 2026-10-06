@@ -3,6 +3,7 @@ import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { CHAT_ENDPOINT } from '$lib/api';
 import { env } from '$env/dynamic/private';
+import { sourceLinksMarkdown } from '$lib/server/chat-sources';
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
@@ -30,8 +31,17 @@ export const POST: RequestHandler = async ({ request }) => {
         throw error(flaskResponse.status, `Gagal terhubung ke Backend Flask: ${errText}`);
     }
 
-    // 4. Kembalikan stream langsung ke Browser
-    return new Response(flaskResponse.body, {
+    // 4. Kembalikan stream ke Browser, ditutup dengan link ke dokumen sumbernya
+    const links = sourceLinksMarkdown(flaskResponse.headers.get('x-chat-sources'));
+    const stream = links && flaskResponse.body
+      ? flaskResponse.body.pipeThrough(
+          new TransformStream<Uint8Array, Uint8Array>({
+            flush: (controller) => controller.enqueue(new TextEncoder().encode(links))
+          })
+        )
+      : flaskResponse.body;
+
+    return new Response(stream, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8'
       }

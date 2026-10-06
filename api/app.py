@@ -1,4 +1,9 @@
+import json
 import os
+from pathlib import Path
+from threading import Lock, Thread
+from uuid import uuid4
+
 from flask import Flask, request, Response, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -6,7 +11,9 @@ from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmb
 from langchain_voyageai import VoyageAIEmbeddings
 from langchain_postgres.vectorstores import PGVector
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
+from sqlalchemy import create_engine, text
+
+from embed_service import embed_pdf
 
 load_dotenv()
 app = Flask(__name__)
@@ -49,8 +56,106 @@ vector_store = PGVector(
     use_jsonb=True,
 )
 
+job_engine = create_engine(connection_string)
+embed_lock = Lock()
+upload_directory = Path(os.getenv("SOP_UPLOAD_DIR", "/app/uploads"))
+
 # 3. LLM and prompt setup
 llm = ChatGoogleGenerativeAI(model='gemini-3.1-flash-lite', google_api_key=api_key, temperature=0.2)
+
+
+def valid_service_token():
+    auth_header = request.headers.get("Authorization")
+    super_secret = os.getenv("APP_SECRET_TOKEN")
+    return bool(auth_header and super_secret and auth_header == f"Bearer {super_secret}")
+
+
+def update_embed_job(job_id, status, message, chunks=None):
+    with job_engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                UPDATE embedding_job
+                SET status = :status, message = :message, chunks = :chunks, updated_at = now()
+                WHERE id = :id
+                """
+            ),
+            {"id": job_id, "status": status, "message": message, "chunks": chunks},
+        )
+
+
+def run_embed_job(job_id, filename, document_id, department):
+    try:
+        # Voyage punya batas token per menit; satu job pada satu waktu menjaga hasil stabil.
+        with embed_lock:
+            update_embed_job(job_id, "processing", "Membaca PDF dan membuat potongan teks…")
+            chunks = embed_pdf(
+                vector_store=vector_store,
+                connection_string=connection_string,
+                file_path=str(upload_directory / filename),
+                source=f"sop/{document_id}/{filename}",
+                department=department,
+                document_id=document_id,
+            )
+            update_embed_job(job_id, "completed", "Embedding selesai.", chunks)
+    except Exception as exc:
+        app.logger.exception("Embed job %s failed", job_id)
+        update_embed_job(job_id, "failed", str(exc)[:500])
+
+
+@app.route("/api/embed/jobs", methods=["POST"])
+def start_embed_job():
+    if not valid_service_token():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    filename = data.get("filename")
+    document_id = data.get("documentId")
+    department = data.get("department")
+
+    if (
+        not isinstance(filename, str)
+        or Path(filename).name != filename
+        or not filename.lower().endswith(".pdf")
+        or not isinstance(document_id, int)
+        or document_id <= 0
+        or not isinstance(department, str)
+        or not department.strip()
+    ):
+        return jsonify({"error": "Data job embed tidak valid."}), 400
+
+    if not (upload_directory / filename).is_file():
+        return jsonify({"error": "File PDF tidak ditemukan."}), 404
+
+    job_id = str(uuid4())
+    with job_engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                INSERT INTO embedding_job (id, document_id, status, message)
+                VALUES (:id, :document_id, 'queued', 'Menunggu antrean embedding…')
+                """
+            ),
+            {"id": job_id, "document_id": document_id},
+        )
+
+    Thread(target=run_embed_job, args=(job_id, filename, document_id, department), daemon=True).start()
+    return jsonify({"id": job_id, "status": "queued", "message": "Menunggu antrean embedding…"}), 202
+
+
+@app.route("/api/embed/jobs/<job_id>", methods=["GET"])
+def get_embed_job(job_id):
+    if not valid_service_token():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    with job_engine.connect() as connection:
+        row = connection.execute(
+            text("SELECT id, status, message, chunks FROM embedding_job WHERE id = :id"), {"id": job_id}
+        ).mappings().first()
+
+    if not row:
+        return jsonify({"error": "Job embedding tidak ditemukan."}), 404
+    return jsonify(dict(row))
 
 def format_docs(docs):
     """Formats retrieved chunks with clear source, department, and page metadata."""
@@ -65,19 +170,37 @@ def format_docs(docs):
         formatted.append(f"{header}\n{doc.page_content}")
     return "\n\n".join(formatted)
 
+
+def collect_sources(docs):
+    """Daftar dokumen sumber (unik) beserta halamannya, dikirim ke web untuk dibuatkan link."""
+    sources = {}
+    for doc in docs:
+        source = doc.metadata.get("source")
+        if not source:
+            continue
+        entry = sources.setdefault(
+            source,
+            {
+                "source": source,
+                "department": doc.metadata.get("department"),
+                "sop_doc_id": doc.metadata.get("sop_doc_id"),
+                "pages": [],
+            },
+        )
+        for page in doc.metadata.get("pages", []):
+            if page not in entry["pages"]:
+                entry["pages"].append(page)
+    for entry in sources.values():
+        entry["pages"].sort()
+    return list(sources.values())
+
 # ============================================================
 # 4. Chat Endpoint
 # ============================================================
 @app.route("/api/chat", methods=["POST"])
 def chat():
     # Bearer token check 
-    auth_header = request.headers.get("Authorization")
-    super_secret = os.getenv("APP_SECRET_TOKEN")
-    
-    if not auth_header or not auth_header.startswith("Bearer "):
-        return jsonify({"error": "Invalid or missing authorization header"}), 401
-
-    if auth_header != f"Bearer {super_secret}":
+    if not valid_service_token():
         return jsonify({"error": "Unauthorized"}), 401
 
     data = request.get_json() or {}
@@ -156,15 +279,14 @@ def chat():
         ("human", "{question}"),
     ])
     
+    # Retrieval dijalankan lebih dulu supaya daftar sumbernya bisa dikirim lewat header
+    docs = retriever.invoke(user_query)
+
     # Construct the RAG Chain
-    rag_chain = (
-        {"context": retriever | format_docs, "question": RunnablePassthrough()}
-        | prompt
-        | llm
-    )
+    rag_chain = prompt | llm
 
     def generate():
-        for chunk in rag_chain.stream(user_query):
+        for chunk in rag_chain.stream({"context": format_docs(docs), "question": user_query}):
             # 1. Extract the actual text string from the chunk
             text_value = ""
             
@@ -180,7 +302,10 @@ def chat():
             if text_value:
                 yield text_value.encode('utf-8')
 
-    return Response(generate(), mimetype="text/plain; charset=utf-8")
+    response = Response(generate(), mimetype="text/plain; charset=utf-8")
+    # json.dumps meng-escape non-ASCII, jadi aman dipakai sebagai nilai header
+    response.headers["X-Chat-Sources"] = json.dumps(collect_sources(docs))
+    return response
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=3018)
