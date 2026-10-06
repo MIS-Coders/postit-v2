@@ -1,3 +1,4 @@
+import { formatSources, type SourceLink } from '$lib/chat-sources';
 import { listSop } from '$lib/server/sop';
 
 // Sumber dokumen hasil retrieval, dikirim API Flask lewat header X-Chat-Sources.
@@ -40,21 +41,23 @@ function findDoc(source: ChatSource) {
 export function sourceLinksMarkdown(header: string | null): string {
 	if (!header) return '';
 
-	const lines: string[] = [];
+	const links: SourceLink[] = [];
 	try {
 		for (const source of JSON.parse(header) as ChatSource[]) {
 			const doc = findDoc(source);
 			if (!doc) continue;
 
 			const url = (page: number) => `/sop?doc=${doc.id}&page=${page}`;
-			const title = doc.nama_dokumen.replace(/[\\[\]]/g, '\\$&');
-			const pageLinks = source.pages.map((page) => `[${page}](${url(page)})`).join(', ');
-			lines.push(`- [${title}](${url(source.pages[0] ?? 1)})${pageLinks ? `, hal. ${pageLinks}` : ''}`);
+			links.push({
+				title: doc.nama_dokumen,
+				url: url(source.pages[0] ?? 1),
+				pages: source.pages.map((page) => ({ page, url: url(page) }))
+			});
 		}
 	} catch {
 		// Link hanyalah pelengkap; jawaban chat tetap dikirim walau sumbernya gagal diolah.
 		return '';
 	}
 
-	return lines.length ? `\n\n---\n\n**Buka dokumen terkait:**\n\n${lines.join('\n')}\n` : '';
+	return formatSources(links);
 }
