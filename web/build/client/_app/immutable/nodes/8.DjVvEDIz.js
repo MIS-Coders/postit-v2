@@ -1,0 +1,1 @@
+import"../chunks/CXOibcuS.js";import"../chunks/xihTtKlq.js";import{t as e}from"../chunks/Dx-PUGaQ.js";function t(t,n){e(t,{get data(){return n.data},get form(){return n.form}})}export{t as component};

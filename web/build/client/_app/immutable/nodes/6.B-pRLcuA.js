@@ -1,0 +1,1 @@
+import{St as e,xt as t}from"../chunks/CXOibcuS.js";import"../chunks/xihTtKlq.js";import{t as n}from"../chunks/D3yw5JCi.js";function r(r,i){e(i,!0),n(r,{type:`FORM`,get departements(){return i.data.departements},get docs(){return i.data.docs}}),t()}export{r as component};
