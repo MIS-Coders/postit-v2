@@ -128,7 +128,7 @@
 <svelte:head><title>Asisten SOP · PostIt</title></svelte:head>
 
 <div class="flex h-dvh flex-col bg-background text-foreground">
-	<header class="flex shrink-0 items-center gap-3 px-4 py-3 md:px-6">
+	<header class="flex shrink-0 items-center gap-3 px-4 py-3 md:px-6 short:py-2">
 		<ChatMascot class="w-9" mood={isLoading ? 'thinking' : 'idle'} interactive />
 		<div class="min-w-0 leading-tight">
 			<p class="truncate text-[15px] font-bold tracking-tight">Asisten SOP</p>
@@ -155,32 +155,33 @@
 	<div bind:this={scroller} class="min-h-0 flex-1 overflow-y-auto">
 		<div class="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 md:px-6">
 			{#if messages.length === 0}
-				<div class="flex flex-1 flex-col items-center justify-center py-10 text-center">
+				<!-- ukuran dasar untuk layar pendek (laptop Windows); varian tall membesarkannya -->
+				<div class="flex flex-1 flex-col items-center justify-center py-3 text-center tall:py-6 tall:md:py-10">
 					<div class="relative">
 						<div
-							class="pointer-events-none absolute -inset-16 rounded-full bg-emerald-400/20 blur-3xl dark:bg-emerald-400/10"
+							class="pointer-events-none absolute -inset-6 rounded-full bg-emerald-400/20 blur-2xl tall:-inset-16 tall:blur-3xl dark:bg-emerald-400/10"
 						></div>
-						<ChatMascot class="w-36 md:w-44" interactive />
+						<ChatMascot class="w-24 tall:w-32 tall:md:w-44" interactive />
 						<div
-							class="absolute -top-3 -left-12 rounded-2xl rounded-br-md bg-card px-4 py-2 text-base font-semibold shadow-lg ring-1 ring-border md:-left-16"
+							class="absolute -top-2 -left-11 rounded-2xl rounded-br-md bg-card px-3 py-1.5 text-sm font-semibold shadow-lg ring-1 ring-border tall:-top-3 tall:-left-12 tall:px-4 tall:py-2 tall:text-base tall:md:-left-16"
 						>
 							Halo!
 						</div>
 					</div>
 
-					<h1 class="mt-10 text-2xl font-bold tracking-tight md:text-3xl">Ada yang bisa saya bantu?</h1>
-					<p class="mt-2 max-w-md text-sm text-muted-foreground">
+					<h1 class="mt-4 text-2xl font-bold tracking-tight tall:mt-7 tall:md:mt-10 tall:md:text-3xl">Ada yang bisa saya bantu?</h1>
+					<p class="mt-1.5 max-w-md text-sm text-muted-foreground tall:mt-2">
 						Tanyakan apa saja tentang SOP dan Instruksi Kerja. Saya carikan jawabannya beserta dokumen
 						sumbernya.
 					</p>
 
-					<div class="mt-8 grid w-full gap-2.5 sm:grid-cols-3">
+					<div class="mt-5 grid w-full gap-2 sm:grid-cols-3 sm:gap-2.5 tall:mt-6 tall:md:mt-8">
 						{#each suggestions as suggestion (suggestion.text)}
 							{@const Icon = suggestion.icon}
 							<button
 								type="button"
 								onclick={() => send(suggestion.text)}
-								class="group flex items-start gap-3 rounded-2xl border bg-card p-3.5 text-left text-sm font-medium transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md sm:flex-col"
+								class="group flex items-center gap-3 rounded-2xl border bg-card p-2.5 text-left text-sm font-medium transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md tall:items-start tall:p-3.5 tall:sm:flex-col"
 							>
 								<span
 									class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground"
@@ -284,7 +285,7 @@
 		</div>
 	</div>
 
-	<footer class="shrink-0 px-4 pb-4 md:px-6">
+	<footer class="shrink-0 px-4 pb-4 md:px-6 short:pb-3">
 		<form
 			onsubmit={onSubmit}
 			class="mx-auto w-full max-w-3xl rounded-[1.75rem] border bg-card p-2 shadow-lg shadow-black/5 transition focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/10"
@@ -349,7 +350,7 @@
 				{/if}
 			</div>
 		</form>
-		<p class="mt-2 text-center text-[11px] text-muted-foreground">
+		<p class="mt-2 text-center text-[11px] text-muted-foreground short:hidden">
 			Jawaban AI bisa keliru. Selalu cek dokumen sumbernya.
 		</p>
 	</footer>

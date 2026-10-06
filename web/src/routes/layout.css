@@ -7,6 +7,7 @@
 @custom-variant dark (&:is(.dark *));
 /* layar pendek, mis. laptop Windows 1366x768 dengan taskbar + toolbar browser */
 @custom-variant short (@media (max-height: 760px));
+@custom-variant tall (@media (min-height: 761px));
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
