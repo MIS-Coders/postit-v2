@@ -10,7 +10,7 @@
 	import { ui } from '$lib/state/ui.svelte';
 	import { cn } from '$lib/utils';
 
-	let { children } = $props();
+	let { children, data } = $props();
 
 	const mobileTabs = [
 		{ href: '/sop', label: 'SOP/IK', icon: RiBookOpenLine },
@@ -24,7 +24,7 @@
 	<div
 		class="flex min-w-0 flex-1 flex-col bg-sidebar md:rounded-[1.75rem] md:border md:shadow-[0_0_0_6px] md:shadow-primary/5"
 	>
-		<AppTopbar />
+		<AppTopbar user={data.user} />
 
 		<div class="flex min-h-0 flex-1 gap-2 md:pr-4 md:pb-4">
 			<AppRail />

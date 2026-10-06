@@ -11,8 +11,15 @@
 
 	const tabs = [
 		{ href: '/sop', label: 'SOP/IK' },
-		{ href: '/formulir', label: 'SOP Formulir' }
+		{ href: '/formulir', label: 'SOP Formulir' },
+		{ href: '/embed', label: 'Embed SOP' }
 	];
+
+	interface Props {
+		user: { name: string; email: string } | null;
+	}
+
+	let { user }: Props = $props();
 
 	let searchEl = $state<HTMLInputElement | null>(null);
 
@@ -90,6 +97,16 @@
 		</label>
 
 		<ThemeToggle />
+
+		{#if user}
+			<form method="POST" action="/logout" class="hidden md:block">
+				<button type="submit" class="max-w-32 truncate text-sm font-medium text-muted-foreground transition hover:text-foreground" title={user.email}>
+					{user.name}
+				</button>
+			</form>
+		{:else}
+			<a href="/login" class="hidden rounded-lg border px-3 py-1.5 text-sm font-medium transition hover:bg-muted md:block">Masuk</a>
+		{/if}
 
 		<span class="hidden h-6 w-px bg-border md:block"></span>
 
