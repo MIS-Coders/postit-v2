@@ -52,18 +52,6 @@ vector_store = PGVector(
 # 3. LLM and prompt setup
 llm = ChatGoogleGenerativeAI(model='gemini-3.1-flash-lite', google_api_key=api_key, temperature=0.2)
 
-system_prompt = (
-    "Anda adalah asisten virtual SOP (Standard Operating Procedure) dan IK (Instruksi Kerja).\n"
-    "Jawablah pertanyaan pengguna secara akurat berdasarkan konteks dokumen yang diberikan.\n"
-    "Jika informasi tidak ditemukan dalam konteks, katakan dengan jelas bahwa Anda tidak menemukan jawabannya di dokumen SOP/IK.\n"
-    "Sebutkan nama dokumen sumber (source), departemen, dan nomor halaman jika tersedia dalam konteks.\n\n"
-    "Konteks Dokumen:\n{context}"
-)
-prompt = ChatPromptTemplate.from_messages([
-    ("system", system_prompt),
-    ("human", "{question}"),
-])
-
 def format_docs(docs):
     """Formats retrieved chunks with clear source, department, and page metadata."""
     formatted = []
@@ -82,20 +70,66 @@ def format_docs(docs):
 # ============================================================
 @app.route("/api/chat", methods=["POST"])
 def chat():
+    # Bearer token check 
+    auth_header = request.headers.get("Authorization")
+    super_secret = os.getenv("APP_SECRET_TOKEN")
+    
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Invalid or missing authorization header"}), 401
+
+    if auth_header != f"Bearer {super_secret}":
+        return jsonify({"error": "Unauthorized"}), 401
+
     data = request.get_json() or {}
     user_query = data.get("query")
     department_filter = data.get("department")  # Optional metadata filter
-
+    
+    chat_mode = data.get("mode", "explain")
+    
     if not user_query:
         return jsonify({"error": "Query is required"}), 400
+    
+    # Mapping Departement
+    DEPARTMENT_MAPPING = {
+        "HCM": "HCM - Human Capital Management",
+        "MIS": "MIS - Management Information System"
+    }
+    
+    # "All" berarti tidak menggunakan filter department
+    if department_filter == "All":
+        department_filter = None
 
     # Build search parameters with optional metadata filtering, fetch the top 3 most relevant text chunks
     search_kwargs = {"k": 3}
     if department_filter:
-        search_kwargs["filter"] = {"department": department_filter}
+        db_department_name = DEPARTMENT_MAPPING.get(department_filter, department_filter)
+        search_kwargs["filter"] = {"department": db_department_name}
 
     retriever = vector_store.as_retriever(search_kwargs=search_kwargs)
+    
+    # define chat mode
+    if chat_mode == "reference":
+        system_prompt = (
+            "Anda adalah asisten pencari referensi SOP dan IK.\n"
+            "Tugas Anda HANYA mencari dan menyebutkan Nama Dokumen, Departemen, dan Nomor Halaman yang terkait dengan pertanyaan pengguna.\n"
+            "DILARANG KERAS menjelaskan, merangkum, atau menjabarkan isi atau langkah-langkah dari dokumen tersebut. Cukup berikan referensi lokasinya saja dalam bentuk poin-poin singkat.\n"
+            "Jika informasi tidak ditemukan, katakan 'Referensi tidak ditemukan.'\n\n"
+            "Konteks Dokumen:\n{context}"
+        )
+    else:
+        system_prompt = (
+            "Anda adalah asisten virtual SOP (Standard Operating Procedure) dan IK (Instruksi Kerja).\n"
+            "Jawablah pertanyaan pengguna secara akurat berdasarkan konteks dokumen yang diberikan.\n"
+            "Jika informasi tidak ditemukan dalam konteks, katakan dengan jelas bahwa Anda tidak menemukan jawabannya di dokumen SOP/IK.\n"
+            "Sebutkan nama dokumen sumber (source), departemen, dan nomor halaman jika tersedia dalam konteks.\n\n"
+            "Konteks Dokumen:\n{context}"
+        )
 
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("human", "{question}"),
+    ])
+    
     # Construct the RAG Chain
     rag_chain = (
         {"context": retriever | format_docs, "question": RunnablePassthrough()}

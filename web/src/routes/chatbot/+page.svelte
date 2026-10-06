@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { marked } from 'marked';
+	import { tick } from 'svelte';
 
-	import { CHAT_ENDPOINT } from '$lib/api';
 	import { Avatar, AvatarFallback } from '$lib/components/ui/avatar';
 	import { Button } from '$lib/components/ui/button';
 	import { Card } from '$lib/components/ui/card';
@@ -24,9 +24,21 @@
 	let messages = $state<Message[]>([]);
 	let query = $state('');
 	let selectedDepartment = $state('');
+	let chatMode = $state('explain'); // Default chat mode
 	let isLoading = $state(false);
 
+	// Elemen anchor untuk auto-scroll
+    let scrollAnchor: HTMLDivElement | undefined = $state();
+
 	const departments = ['All', 'HCM', 'MIS'];
+
+	// Fungsi untuk menggulir layar otomatis ke bawah
+    async function scrollToBottom() {
+        await tick(); // Tunggu hingga Svelte selesai memperbarui DOM HTML
+        if (scrollAnchor) {
+            scrollAnchor.scrollIntoView({ behavior: 'auto', block: 'end' });
+        }
+    }
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
@@ -38,22 +50,25 @@
 
 		// Add user message
 		messages = [...messages, { role: 'user', content: userMessage }];
+		scrollToBottom();
 
 		// Add empty assistant message for streaming
 		messages = [...messages, { role: 'assistant', content: '' }];
 		const assistantIndex = messages.length - 1;
+		scrollToBottom();
 
 		isLoading = true;
 
 		try {
-			const response = await fetch(CHAT_ENDPOINT, {
+			const response = await fetch('/api/chat', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
 					query: userMessage,
-					department: selectedDepartment === 'All' ? null : selectedDepartment || null
+					department: selectedDepartment === 'All' ? null : selectedDepartment || null,
+					mode: chatMode
 				})
 			});
 
@@ -77,6 +92,8 @@
 
 				// Trigger Svelte reactivity
 				messages = [...messages];
+
+				scrollToBottom();
 			}
 		} catch (error: unknown) {
 			const message =
@@ -84,6 +101,7 @@
 
 			messages[assistantIndex].content = `Error: ${message}`;
 			messages = [...messages];
+			scrollToBottom();
 		} finally {
 			isLoading = false;
 		}
@@ -108,6 +126,23 @@
 						Knowledge Base
 					</p>
 				</div>
+			</div>
+
+			<!-- Mode Dropdown -->
+			<div class="w-48">
+				<Select
+					type="single"
+					bind:value={chatMode}
+					disabled={isLoading}
+				>
+					<SelectTrigger>
+						<SelectValue placeholder="Pilih Mode" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="explain">📝 Penjelasan Detail</SelectItem>
+						<SelectItem value="reference">🔍 Hanya Cari Referensi</SelectItem>
+					</SelectContent>
+				</Select>
 			</div>
 
 			<div class="w-40">
@@ -207,6 +242,8 @@
 						</div>
 					{/each}
 				{/if}
+
+				<div bind:this={scrollAnchor} class="h-1 w-full mt-2"></div>
 			</main>
 		</ScrollArea>
 
