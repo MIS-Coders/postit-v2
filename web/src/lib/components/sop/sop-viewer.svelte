@@ -5,6 +5,7 @@
 	import RiErrorWarningLine from 'remixicon-svelte/icons/error-warning-line';
 	import RiFileCopyLine from 'remixicon-svelte/icons/file-copy-line';
 	import RiFileTextLine from 'remixicon-svelte/icons/file-text-line';
+	import RiPrinterLine from 'remixicon-svelte/icons/printer-line';
 	import RiSkipLeftLine from 'remixicon-svelte/icons/skip-left-line';
 	import RiSkipRightLine from 'remixicon-svelte/icons/skip-right-line';
 	import RiSparkling2Line from 'remixicon-svelte/icons/sparkling-2-line';
@@ -22,9 +23,10 @@
 		initialPage?: number;
 		// Formulir tidak di-index RAG (PLAN §6.1), jadi tombol Tanya AI disembunyikan.
 		canAskAi: boolean;
+		canPrint: boolean;
 	}
 
-	let { typeLabel, doc, departement, initialPage = 1, canAskAi }: Props = $props();
+	let { typeLabel, doc, departement, initialPage = 1, canAskAi, canPrint }: Props = $props();
 
 	let pageNo = $state(1);
 	let numPages = $state(0);
@@ -66,6 +68,12 @@
 		} catch {
 			// clipboard tidak tersedia
 		}
+	}
+
+	function printDocument() {
+		if (!doc) return;
+		const printWindow = window.open(sopFileUrl(doc.id), '_blank');
+		printWindow?.addEventListener('load', () => printWindow.print(), { once: true });
 	}
 
 	const navBtn =
@@ -160,11 +168,23 @@
 				</div>
 			{/if}
 
-			<!-- viewer: lihat saja, tanpa download/print (PLAN §5.1) -->
+			<!-- SOP tetap lihat saja; formulir dapat dicetak. -->
 			<div class="mt-8 overflow-hidden rounded-2xl border bg-muted/40">
 				{#if doc.has_file}
 					<div class="flex items-center justify-center border-b bg-background/60 px-3 py-2 sm:justify-between md:justify-center lg:justify-between">
-						<span class="hidden px-2 text-xs font-medium whitespace-nowrap text-muted-foreground sm:inline md:hidden lg:inline">PDF · lihat saja</span>
+						<div class="flex items-center gap-2 px-2">
+							<span class="text-xs font-medium whitespace-nowrap text-muted-foreground">PDF · {canPrint ? 'dapat dicetak' : 'lihat saja'}</span>
+							{#if canPrint}
+								<button
+									type="button"
+									onclick={printDocument}
+									class="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-primary transition hover:bg-primary/10"
+								>
+									<RiPrinterLine class="size-3.5" />
+									Print
+								</button>
+							{/if}
+						</div>
 						<div class="flex items-center gap-0.5">
 							<button type="button" class={navBtn} aria-label="Halaman pertama" disabled={pageNo <= 1} onclick={() => (pageNo = 1)}>
 								<RiSkipLeftLine class="size-4" />
