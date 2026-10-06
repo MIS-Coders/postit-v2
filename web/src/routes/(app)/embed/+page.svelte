@@ -29,7 +29,7 @@
 	const field = 'mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary';
 </script>
 
-<svelte:head><title>Embed Dokumen · PostIt</title></svelte:head>
+<svelte:head><title>Upload SOP · PostIt</title></svelte:head>
 
 <section class="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-10 md:py-8">
 	<div class="mx-auto max-w-4xl">
@@ -38,8 +38,8 @@
 				<RiFileUploadLine class="size-5" />
 			</span>
 			<div>
-				<h1 class="text-2xl font-semibold tracking-tight">Embed SOP</h1>
-				<p class="mt-1 text-sm text-muted-foreground">Upload SOP/IK baru dan embedding akan diproses langsung di server.</p>
+				<h1 class="text-2xl font-semibold tracking-tight">Upload SOP</h1>
+				<p class="mt-1 text-sm text-muted-foreground">Upload SOP/IK baru untuk diproses otomatis oleh sistem.</p>
 			</div>
 		</div>
 
@@ -50,7 +50,7 @@
 		{#if job}
 			<div class="mt-5 rounded-xl border bg-muted/40 p-4" role="status">
 				<div class="flex items-center justify-between gap-3">
-					<p class="font-medium">Status embedding</p>
+					<p class="font-medium">Status pemrosesan</p>
 					<span class="rounded-full bg-background px-2.5 py-1 text-xs font-semibold capitalize">{job.status}</span>
 				</div>
 				<p class="mt-2 text-sm text-muted-foreground">{job.message}</p>
@@ -63,7 +63,7 @@
 				<RiFileUploadLine class="size-5 text-primary" />
 				<h2 class="font-semibold">Upload SOP/IK baru</h2>
 			</div>
-			<p class="mt-1 text-sm text-muted-foreground">PDF maksimal 25 MB. Formulir tidak diproses untuk RAG.</p>
+				<p class="mt-1 text-sm text-muted-foreground">PDF maksimal 25 MB. Formulir tidak diproses untuk pencarian AI.</p>
 
 			<div class="mt-5 grid gap-4 sm:grid-cols-2">
 				<label class="text-sm font-medium">Nama dokumen<input class={field} name="namaDokumen" required /></label>
@@ -81,7 +81,7 @@
 			</div>
 
 			<button class="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90" type="submit">
-				<RiFileUploadLine class="size-4" /> Upload & embed
+				<RiFileUploadLine class="size-4" /> Upload SOP
 			</button>
 		</form>
 
@@ -89,9 +89,9 @@
 			<div class="mt-6 rounded-2xl border bg-card p-5 md:p-6">
 				<div class="flex items-center gap-2">
 					<RiShieldStarLine class="size-5 text-primary" />
-					<h2 class="font-semibold">Embed SOP lama</h2>
+					<h2 class="font-semibold">Proses SOP lama</h2>
 				</div>
-				<p class="mt-1 text-sm text-muted-foreground">Jalankan untuk PDF yang sudah tersedia di halaman SOP. Hanya embedding dokumen yang dipilih yang diganti.</p>
+				<p class="mt-1 text-sm text-muted-foreground">Jalankan untuk PDF yang sudah tersedia di halaman SOP. Hanya dokumen yang dipilih yang diproses ulang.</p>
 				<div class="mt-4 divide-y rounded-xl border">
 					{#each data.docs as doc (doc.id)}
 						<div class="flex items-center justify-between gap-4 p-3">
@@ -99,7 +99,7 @@
 							<form method="POST" action="?/reembed">
 								<input name="documentId" type="hidden" value={doc.id} />
 								<button disabled={!doc.has_file} class="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50" type="submit">
-									<RiRefreshLine class="size-3.5" /> Embed ulang
+									<RiRefreshLine class="size-3.5" /> Proses ulang
 								</button>
 							</form>
 						</div>

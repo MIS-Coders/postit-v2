@@ -30,7 +30,7 @@ function textValue(value: FormDataEntryValue | null) {
 }
 
 export const actions: Actions = {
-	upload: async ({ request, locals }) => {
+	upload: async ({ request, locals, url }) => {
 		await requireRole(locals, ['admin', 'superadmin']);
 		const form = await request.formData();
 		const pdf = form.get('pdf');
@@ -68,10 +68,10 @@ export const actions: Actions = {
 		} catch (cause) {
 			return fail(500, { error: cause instanceof Error ? cause.message : 'Upload atau embed gagal dimulai.' });
 		}
-		redirect(303, `/embed?job=${job.id}`);
+		redirect(303, `${url.pathname}?job=${job.id}`);
 	},
 
-	reembed: async ({ request, locals }) => {
+	reembed: async ({ request, locals, url }) => {
 		await requireRole(locals, ['superadmin']);
 		const id = Number(textValue((await request.formData()).get('documentId')));
 		const { departements, docs } = listSop('READ');
@@ -87,6 +87,6 @@ export const actions: Actions = {
 		} catch (cause) {
 			return fail(500, { error: cause instanceof Error ? cause.message : 'Embed gagal dimulai.' });
 		}
-		redirect(303, `/embed?job=${job.id}`);
+		redirect(303, `${url.pathname}?job=${job.id}`);
 	}
 };

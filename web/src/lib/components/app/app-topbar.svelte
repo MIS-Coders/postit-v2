@@ -12,7 +12,7 @@
 	const tabs = [
 		{ href: '/sop', label: 'SOP/IK' },
 		{ href: '/formulir', label: 'SOP Formulir' },
-		{ href: '/embed', label: 'Embed SOP' }
+		{ href: '/upload', label: 'Upload SOP' }
 	];
 
 	interface Props {
