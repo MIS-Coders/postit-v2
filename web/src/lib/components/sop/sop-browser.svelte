@@ -34,5 +34,12 @@
 	<SopTree title={label} {departements} {docs} selectedId={doc?.id ?? null} search={ui.search} />
 </div>
 <div class={cn('min-h-0 min-w-0 flex-1', doc ? 'flex' : 'hidden md:flex')}>
-	<SopViewer typeLabel={label} {doc} {departement} {initialPage} canAskAi={type === 'READ'} />
+	<SopViewer
+		typeLabel={label}
+		{doc}
+		{departement}
+		{initialPage}
+		canAskAi={type === 'READ'}
+		canPrint={type === 'FORM'}
+	/>
 </div>

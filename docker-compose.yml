@@ -4,15 +4,16 @@ services:
     container_name: rag_postgres
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-rag_user}
+      POSTGRES_USER: ${POSTGRES_USER:-postit}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag_password}
-      POSTGRES_DB: ${POSTGRES_DB:-rag_db}
+      POSTGRES_DB: ${POSTGRES_DB:-postit}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      # host 5433 sudah dipakai container recruitment-db -> pakai 5434, loopback saja
-      - "127.0.0.1:5434:5432"
+      # host 5433 sudah dipakai container recruitment-db -> pakai 5434
+      # dibuka ke publik (0.0.0.0) supaya bisa diakses dari luar VPS
+      - "0.0.0.0:5434:5432"
     networks:
       - rag_network
     healthcheck:
@@ -28,13 +29,13 @@ services:
     container_name: rag_flask_api
     restart: unless-stopped
     ports:
-      # host 3018 -> https://postit-ai.mahkotagroup.com (container tetap 5000)
-      - "3018:5000"
+      # host 3018 -> https://postit-ai.mahkotagroup.com (container 3018, sesuai Dockerfile)
+      - "3018:3018"
     volumes:
       # PDF SOP untuk api/scripts/batch_embed.py (script membaca ./uploads relatif /app)
       - ./storage/sop:/app/uploads:ro
     environment:
-      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-rag_db}
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-postit}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postit}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - VOYAGE_API_KEY=${VOYAGE_API_KEY}
     depends_on:
@@ -50,12 +51,20 @@ services:
     container_name: rag_svelte_web
     restart: unless-stopped
     ports:
-      # host 3017 -> https://postit.mahkotagroup.com (dev server vite tetap 5173)
+      # host 3017 -> https://postit-v2.mahkotagroup.com (dev server vite tetap 5173)
       - "3017:5173"
     volumes:
       # folder PDF SOP + sop-data.json; SOP_STORAGE_DIR=../storage/sop -> /storage/sop
       - ./storage:/storage:ro
     environment:
+      - ORIGIN=${ORIGIN}
+      - PUBLIC_API_URL=${PUBLIC_API_URL}
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - SOP_STORAGE_DIR=${SOP_STORAGE_DIR}
+      - HOST=0.0.0.0
+      - PORT=5173
+      - APP_SECRET_TOKEN=${APP_SECRET_TOKEN} # Bearer token untuk web container -> api container (localhost:3018)
       # - ORIGIN=${ORIGIN:-https://postit.mahkotagroup.com}
       # - PUBLIC_API_URL=${PUBLIC_API_URL:-https://postit-ai.mahkotagroup.com}
       # - DATABASE_URL=postgres://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-rag_db}
@@ -63,8 +72,7 @@ services:
       # - SOP_STORAGE_DIR=${SOP_STORAGE_DIR:-../storage/sop}
       # - HOST=0.0.0.0
       # - PORT=5173
-      - APP_SECRET_TOKEN=${APP_SECRET_TOKEN}
-      - PUBLIC_API_URL=${PUBLIC_API_URL} # untuk local development, web container -> api container (localhost:3018)
+
     depends_on:
       - api
     networks:

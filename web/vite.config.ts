@@ -5,12 +5,12 @@ import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
-	// Dev server di balik nginx reverse proxy (postit.mahkotagroup.com -> 127.0.0.1:3017)
+	// Dev server di balik nginx reverse proxy (postit-v2.mahkotagroup.com -> 127.0.0.1:3017)
 	server: {
 		host: true,
 		port: 5173,
 		strictPort: true,
-		allowedHosts: ['postit.mahkotagroup.com', 'localhost', '127.0.0.1']
+		allowedHosts: ['postit-v2.mahkotagroup.com', 'localhost', '127.0.0.1']
 	},
 	plugins: [
 		tailwindcss(),
