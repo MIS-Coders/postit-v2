@@ -9,7 +9,7 @@ import { eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
 function nextPath(value: string | null) {
-	return value?.startsWith('/') && !value.startsWith('//') ? value : '/sop';
+	return value?.startsWith('/') && !value.startsWith('//') ? value : '/';
 }
 
 export const load: PageServerLoad = ({ locals, url }) => {
@@ -26,7 +26,7 @@ export const actions: Actions = {
 
 		try {
 			await auth.api.signInEmail({
-				body: { email: account.email, password: String(data.get('password') || ''), callbackURL: '/sop' },
+				body: { email: account.email, password: String(data.get('password') || ''), callbackURL: next },
 				headers: event.request.headers
 			});
 		} catch (cause) {
@@ -51,7 +51,7 @@ export const actions: Actions = {
 					name: String(data.get('name') || ''),
 					email,
 					password: String(data.get('password') || ''),
-					callbackURL: '/sop'
+					callbackURL: next
 				},
 				headers: event.request.headers
 			});
