@@ -29,8 +29,34 @@
 
 	const departments = [
 		{ value: null, label: 'Semua' },
+		{ value: 'MH', label: 'MH' },
+		{ value: 'MIS', label: 'MIS' },
+		{ value: 'ACC & TAX', label: 'ACC & TAX' },
 		{ value: 'HCM', label: 'HCM' },
-		{ value: 'MIS', label: 'MIS' }
+		{ value: 'FNC', label: 'FNC' },
+		{ value: 'SSL', label: 'SSL' },
+		{ value: 'ISO 37001:2016 (SMAP)', label: 'ISO 37001:2016 (SMAP)' },
+		{ value: 'CS', label: 'CS' },
+		{ value: 'MKT', label: 'MKT' },
+		{ value: 'MS', label: 'MS' },
+		{ value: 'Internal Audit', label: 'Internal Audit' },
+		{ value: 'IK Proses PKS', label: 'IK Proses PKS' },
+		{ value: 'Estate', label: 'Estate' },
+		{ value: 'ISO/SMK3/ISPO', label: 'ISO/SMK3/ISPO' },
+		{ value: 'Storage Tank', label: 'Storage Tank' },
+		{ value: 'Document Control', label: 'Document Control' },
+		{ value: 'IK-Mutu', label: 'IK-Mutu' },
+		{ value: 'IK-Lingkungan', label: 'IK-Lingkungan' },
+		{ value: 'IK-K3', label: 'IK-K3' },
+		{ value: 'Refinery', label: 'Refinery' },
+		{ value: 'IK KCP', label: 'IK KCP' },
+		{ value: 'IK Refinery', label: 'IK Refinery' },
+		{ value: 'IK Fraksinasi', label: 'IK Fraksinasi' },
+		{ value: 'Halal', label: 'Halal' },
+		{ value: 'IK Biogas', label: 'IK Biogas' },
+		{ value: 'IK FOF Plant', label: 'IK FOF Plant' },
+		{ value: 'IK Solvent', label: 'IK Solvent' },
+		{ value: 'IK PELLETIZING PLANT', label: 'IK PELLETIZING PLANT' }
 	];
 
 	const suggestions = [
@@ -42,7 +68,7 @@
 	let messages = $state<Message[]>([]);
 	let query = $state('');
 	let chatMode = $state('explain');
-	let department = $state<string | null>(null);
+	let department = $state('');
 	let isLoading = $state(false);
 	let scroller = $state<HTMLElement | null>(null);
 	let input = $state<HTMLTextAreaElement | null>(null);
@@ -69,7 +95,7 @@
 			const response = await fetch('/api/chat', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ query: question, department, mode: chatMode }),
+				body: JSON.stringify({ query: question, department: department || null, mode: chatMode }),
 				signal: controller.signal
 			});
 			if (!response.ok || !response.body) throw new Error('Gagal terhubung ke API Chatbot.');
@@ -316,18 +342,19 @@
 					{/each}
 				</div>
 
-				<div class="flex rounded-full bg-muted p-0.5" role="group" aria-label="Departemen">
-					{#each departments as item (item.label)}
-						<button
-							type="button"
-							class={cn(pill, department === item.value && pillActive)}
-							aria-pressed={department === item.value}
-							onclick={() => (department = item.value)}
-						>
-							{item.label}
-						</button>
-					{/each}
-				</div>
+				<label class="relative block min-w-0 max-w-[220px] flex-1 sm:flex-none">
+					<span class="sr-only">Pilih departemen</span>
+					<select
+						bind:value={department}
+						aria-label="Pilih departemen"
+						class="w-full appearance-none rounded-full border border-border bg-muted px-3 py-2 pr-8 text-xs font-medium text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+					>
+						{#each departments as item (item.label)}
+							<option value={item.value ?? ''}>{item.label}</option>
+						{/each}
+					</select>
+					<span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-muted-foreground">▾</span>
+				</label>
 
 				{#if isLoading}
 					<button
