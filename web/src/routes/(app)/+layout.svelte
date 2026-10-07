@@ -26,7 +26,7 @@
 	<div
 		class="flex min-w-0 flex-1 flex-col bg-sidebar md:rounded-[1.75rem] md:border md:shadow-[0_0_0_6px] md:shadow-primary/5"
 	>
-		<AppTopbar user={data.user} role={data.role} />
+		<AppTopbar user={data.user} role={data.role} searchDocs={data.searchDocs} />
 
 		<div class="flex min-h-0 flex-1 gap-2 md:pr-4 md:pb-4">
 			<AppRail />

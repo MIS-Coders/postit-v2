@@ -25,6 +25,11 @@
 	const departement = $derived(
 		doc ? (departements.find((d) => d.id === doc.departement_id) ?? null) : null
 	);
+
+	// Konteks AI selalu mengikuti PDF yang sedang dibuka. Tombol Tanya AI hanya untuk membuka panel.
+	$effect(() => {
+		ui.askAi.context = doc;
+	});
 </script>
 
 <svelte:head><title>{doc ? `${doc.nama_dokumen} · ` : ''}{label} · PostIt</title></svelte:head>

@@ -19,9 +19,10 @@
 	interface Props {
 		user: { name: string; email: string } | null;
 		role: 'user' | 'ms' | 'admin' | 'superadmin' | null;
+		searchDocs: Array<{ id: number; type: 'READ' | 'FORM'; nama: string; nomor: string; departement: string }>;
 	}
 
-	let { user, role }: Props = $props();
+	let { user, role, searchDocs }: Props = $props();
 	let tabs = $derived([
 		{ href: '/chatbot', label: 'Chatbot' },
 		...documentTabs,
@@ -30,12 +31,32 @@
 	]);
 
 	let searchEl = $state<HTMLInputElement | null>(null);
+	let searchOpen = $state(false);
+	const matches = $derived.by(() => {
+		const query = ui.search.trim().toLocaleLowerCase('id-ID');
+		if (!query) return [];
+		return searchDocs
+			.filter((doc) => `${doc.nama} ${doc.nomor} ${doc.departement}`.toLocaleLowerCase('id-ID').includes(query))
+			.slice(0, 8);
+	});
 
 	function onKeydown(event: KeyboardEvent) {
 		if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
 			event.preventDefault();
 			searchEl?.focus();
 		}
+	}
+
+	function resultHref(doc: (typeof searchDocs)[number]) {
+		return `${doc.type === 'READ' ? '/sop' : '/formulir'}?doc=${doc.id}`;
+	}
+
+	function openFirstResult(event: KeyboardEvent) {
+		if (event.key !== 'Enter' || !matches[0]) return;
+		event.preventDefault();
+		ui.search = '';
+		searchOpen = false;
+		location.assign(resultHref(matches[0]));
 	}
 </script>
 
@@ -83,22 +104,44 @@
 	</nav>
 
 	<div class="ml-auto flex items-center gap-2 lg:ml-0">
-		<label
-			class="flex h-9 w-44 items-center gap-2 rounded-full border bg-background px-3 text-sm shadow-xs transition focus-within:border-primary/40 focus-within:ring-3 focus-within:ring-primary/15 md:w-72"
-		>
-			<RiSearchLine class="size-4 shrink-0 text-muted-foreground" />
-			<input
-				bind:this={searchEl}
-				bind:value={ui.search}
-				type="search"
-				placeholder="Cari dokumen…"
-				class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm placeholder:text-muted-foreground focus:ring-0"
-			/>
-			<span class="hidden items-center gap-1 md:flex">
-				<kbd class="rounded border bg-muted px-1.5 font-mono text-[11px] text-muted-foreground">⌘</kbd>
-				<kbd class="rounded border bg-muted px-1.5 font-mono text-[11px] text-muted-foreground">K</kbd>
-			</span>
-		</label>
+		<div class="relative">
+			<label
+				class="flex h-9 w-44 items-center gap-2 rounded-full border bg-background px-3 text-sm shadow-xs transition focus-within:border-primary/40 focus-within:ring-3 focus-within:ring-primary/15 md:w-72"
+			>
+				<RiSearchLine class="size-4 shrink-0 text-muted-foreground" />
+				<input
+					bind:this={searchEl}
+					bind:value={ui.search}
+					type="search"
+					placeholder="Cari SOP atau formulir…"
+					class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm placeholder:text-muted-foreground focus:ring-0"
+					onfocus={() => (searchOpen = true)}
+					onkeydown={openFirstResult}
+				/>
+				<span class="hidden items-center gap-1 md:flex">
+					<kbd class="rounded border bg-muted px-1.5 font-mono text-[11px] text-muted-foreground">⌘</kbd>
+					<kbd class="rounded border bg-muted px-1.5 font-mono text-[11px] text-muted-foreground">K</kbd>
+				</span>
+			</label>
+
+			{#if searchOpen && ui.search.trim()}
+				<div class="absolute top-[calc(100%+0.5rem)] right-0 z-50 w-[min(26rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border bg-popover shadow-xl shadow-black/10">
+					<div class="border-b px-4 py-2.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Hasil pencarian</div>
+					{#if matches.length}
+						<div class="max-h-96 overflow-y-auto p-1.5">
+							{#each matches as doc (doc.type + doc.id)}
+								<a href={resultHref(doc)} onclick={() => { ui.search = ''; searchOpen = false; }} class="flex items-start gap-3 rounded-xl px-3 py-2.5 transition hover:bg-muted">
+									<span class="mt-0.5 rounded-md bg-primary/10 px-2 py-1 text-[10px] font-bold tracking-wide text-primary">{doc.type === 'READ' ? 'SOP/IK' : 'FORM'}</span>
+									<span class="min-w-0"><span class="block truncate text-sm font-medium">{doc.nama}</span><span class="mt-0.5 block truncate text-xs text-muted-foreground">{doc.nomor} · {doc.departement}</span></span>
+								</a>
+							{/each}
+						</div>
+					{:else}
+						<p class="px-4 py-7 text-center text-sm text-muted-foreground">Tidak ada SOP atau formulir yang cocok.</p>
+					{/if}
+				</div>
+			{/if}
+		</div>
 
 		<ThemeToggle />
 
