@@ -10,6 +10,7 @@ import { requireRole, roles, type Role } from '$lib/server/roles';
 import type { Actions, PageServerLoad } from './$types';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const usernamePattern = /^[a-z0-9._-]{3,64}$/;
 
 function value(form: FormData, field: string) {
 	const input = form.get(field);
@@ -23,7 +24,7 @@ function validRole(role: string): role is Role {
 export const load: PageServerLoad = async ({ locals }) => {
 	const access = await requireRole(locals, ['superadmin']);
 	const users = await db
-		.select({ id: user.id, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt })
+		.select({ id: user.id, name: user.name, username: user.username, email: user.email, role: user.role, createdAt: user.createdAt })
 		.from(user)
 		.orderBy(desc(user.createdAt));
 
@@ -35,21 +36,24 @@ export const actions: Actions = {
 		await requireRole(locals, ['superadmin']);
 		const form = await request.formData();
 		const name = value(form, 'name');
+		const username = value(form, 'username').toLowerCase();
 		const email = value(form, 'email').toLowerCase();
 		const password = value(form, 'password');
 		const role = value(form, 'role');
 
-		if (!name || !emailPattern.test(email) || password.length < 8 || !validRole(role)) {
-			return fail(400, { error: 'Isi nama, email valid, password minimal 8 karakter, dan role dengan benar.' });
+		if (!name || !usernamePattern.test(username) || !emailPattern.test(email) || password.length < 8 || !validRole(role)) {
+			return fail(400, { error: 'Isi nama, username valid, email valid, password minimal 8 karakter, dan role dengan benar.' });
 		}
 
 		const [existing] = await db.select({ id: user.id }).from(user).where(eq(user.email, email)).limit(1);
 		if (existing) return fail(409, { error: 'Email tersebut sudah terdaftar.' });
+		const [existingUsername] = await db.select({ id: user.id }).from(user).where(eq(user.username, username)).limit(1);
+		if (existingUsername) return fail(409, { error: 'Username tersebut sudah digunakan.' });
 
 		const userId = randomUUID();
 		const passwordHash = await hashPassword(password);
 		await db.transaction(async (tx) => {
-			await tx.insert(user).values({ id: userId, name, email, role });
+			await tx.insert(user).values({ id: userId, name, username, email, role });
 			await tx.insert(account).values({
 				id: randomUUID(),
 				accountId: userId,
@@ -67,14 +71,22 @@ export const actions: Actions = {
 		const form = await request.formData();
 		const userId = value(form, 'userId');
 		const name = value(form, 'name');
+		const username = value(form, 'username').toLowerCase();
 		const role = value(form, 'role');
 
-		if (!userId || !name || !validRole(role)) return fail(400, { error: 'Data pengguna tidak valid.' });
+		if (!userId || !name || !usernamePattern.test(username) || !validRole(role)) return fail(400, { error: 'Data pengguna tidak valid.' });
 		if (userId === access.userId && role !== access.role) {
 			return fail(400, { error: 'Role akun sendiri tidak dapat diubah dari halaman ini.' });
 		}
 
-		await db.update(user).set({ name, role, updatedAt: new Date() }).where(eq(user.id, userId));
+		const [existingUsername] = await db
+			.select({ id: user.id })
+			.from(user)
+			.where(eq(user.username, username))
+			.limit(1);
+		if (existingUsername && existingUsername.id !== userId) return fail(409, { error: 'Username tersebut sudah digunakan.' });
+
+		await db.update(user).set({ name, username, role, updatedAt: new Date() }).where(eq(user.id, userId));
 		redirect(303, url.pathname);
 	},
 

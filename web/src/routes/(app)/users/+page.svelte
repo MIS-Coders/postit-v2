@@ -24,8 +24,9 @@
 
 		<form method="POST" action="?/create" class="mt-6 rounded-2xl border bg-card p-5 md:p-6">
 			<h2 class="font-semibold">Tambah pengguna</h2>
-			<div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+			<div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
 				<label class="text-sm font-medium">Nama<input class={field} name="name" autocomplete="name" required /></label>
+				<label class="text-sm font-medium">Username<input class={field} name="username" autocomplete="username" required /></label>
 				<label class="text-sm font-medium">Email<input class={field} name="email" type="email" autocomplete="email" required /></label>
 				<label class="text-sm font-medium">Password awal<input class={field} name="password" type="password" minlength="8" autocomplete="new-password" required /></label>
 				<label class="text-sm font-medium">Role
@@ -42,9 +43,10 @@
 			<div class="divide-y">
 				{#each data.users as account (account.id)}
 					<div class="p-5 md:px-6">
-						<form method="POST" action="?/update" class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_10rem_auto] md:items-end">
+						<form method="POST" action="?/update" class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_10rem_auto] md:items-end">
 							<input type="hidden" name="userId" value={account.id} />
 							<label class="text-sm font-medium">Nama<input class={field} name="name" value={account.name} required /></label>
+							<label class="text-sm font-medium">Username<input class={field} name="username" value={account.username ?? ''} required /></label>
 							<label class="text-sm font-medium">Email<input class={`${field} text-muted-foreground`} value={account.email} disabled /></label>
 							<label class="text-sm font-medium">Role
 								{#if account.id === data.userId}

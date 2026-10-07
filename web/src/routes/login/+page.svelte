@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { page } from '$app/state';
+
 	let { form } = $props();
 	let mode = $state<'login' | 'register'>('login');
 </script>
@@ -17,10 +19,14 @@
 		{#if form?.error}<p class="mt-5 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{form.error}</p>{/if}
 
 		<form method="POST" action={mode === 'login' ? '?/signIn' : '?/signUp'} class="mt-6 space-y-4">
+			<input name="next" type="hidden" value={page.url.searchParams.get('next') ?? ''} />
 			{#if mode === 'register'}
 				<label class="block text-sm font-medium">Nama<input class="mt-1 w-full rounded-lg border bg-background px-3 py-2" name="name" required /></label>
+				<label class="block text-sm font-medium">Username<input class="mt-1 w-full rounded-lg border bg-background px-3 py-2" name="username" autocomplete="username" required /></label>
+				<label class="block text-sm font-medium">Email<input class="mt-1 w-full rounded-lg border bg-background px-3 py-2" name="email" type="email" autocomplete="email" required /></label>
+			{:else}
+				<label class="block text-sm font-medium">Username<input class="mt-1 w-full rounded-lg border bg-background px-3 py-2" name="username" autocomplete="username" required /></label>
 			{/if}
-			<label class="block text-sm font-medium">Email<input class="mt-1 w-full rounded-lg border bg-background px-3 py-2" name="email" type="email" required /></label>
 			<label class="block text-sm font-medium">Password<input class="mt-1 w-full rounded-lg border bg-background px-3 py-2" name="password" type="password" minlength="8" required /></label>
 			<button class="w-full rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground transition hover:bg-primary/90" type="submit">{mode === 'login' ? 'Masuk' : 'Daftar'}</button>
 		</form>

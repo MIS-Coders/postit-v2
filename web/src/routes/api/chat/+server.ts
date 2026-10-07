@@ -5,7 +5,9 @@ import { CHAT_ENDPOINT } from '$lib/api';
 import { env } from '$env/dynamic/private';
 import { sourceLinksMarkdown } from '$lib/server/chat-sources';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+  if (!locals.user) throw error(401, 'Silakan login terlebih dahulu.');
+
   try {
     // 1. Ambil data (pertanyaan) dari Browser
     const body = await request.json();

@@ -1,1 +1,0 @@
-import{F as e,L as t,St as n,et as r,p as i,xt as a}from"../chunks/CXOibcuS.js";import{l as o}from"../chunks/CieapkiZ.js";import"../chunks/xihTtKlq.js";var s=t(`<a>better-auth</a>`);function c(t,c){n(c,!0);var l=s();r(e=>i(l,`href`,e),[()=>o(`/demo/better-auth`)]),e(t,l),a()}export{c as component};
