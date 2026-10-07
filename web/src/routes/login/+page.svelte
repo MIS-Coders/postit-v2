@@ -59,7 +59,7 @@
 					{:else}
 						<label class="block text-sm font-medium text-slate-700">Username<input class={field} name="username" autocomplete="username" placeholder="Masukkan username" required /></label>
 					{/if}
-					<label class="block text-sm font-medium text-slate-700">Password<input class={field} name="password" type="password" autocomplete={mode === 'login' ? 'current-password' : 'new-password'} minlength="8" placeholder="••••••••" required /></label>
+					<label class="block text-sm font-medium text-slate-700">Password<input class={field} name="password" type="password" autocomplete={mode === 'login' ? 'current-password' : 'new-password'} minlength={mode === 'register' ? 8 : undefined} placeholder="••••••••" required /></label>
 					<button class="group mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-800 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-800/20 transition hover:bg-emerald-900 focus:outline-none focus:ring-4 focus:ring-emerald-700/20" type="submit">
 						{mode === 'login' ? 'Masuk ke PostIt MIS' : 'Buat akun'} <RiArrowRightLine class="size-4 transition-transform group-hover:translate-x-1" />
 					</button>
