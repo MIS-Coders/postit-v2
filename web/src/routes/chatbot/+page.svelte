@@ -205,7 +205,7 @@
 						></div>
 						<ChatMascot class="w-24 tall:w-32 tall:md:w-44" interactive />
 						<div
-							class="absolute -top-2 -left-11 max-w-48 rounded-2xl rounded-br-md bg-card px-3 py-1.5 text-left text-sm font-semibold shadow-lg ring-1 ring-border tall:-top-3 tall:-left-12 tall:max-w-56 tall:px-4 tall:py-2 tall:text-base tall:md:-left-16"
+							class="absolute top-[8%] right-[calc(100%+0.75rem)] max-w-48 rounded-2xl rounded-br-md bg-card px-3 py-1.5 text-right text-sm font-semibold whitespace-nowrap shadow-lg ring-1 ring-border tall:max-w-56 tall:px-4 tall:py-2 tall:text-base"
 						>
 							{#key greetingIndex}
 								<span class="greeting-word">{greetings[greetingIndex]}</span>
