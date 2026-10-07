@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { hashPassword } from 'better-auth/crypto';
-import { desc, eq } from 'drizzle-orm';
+import { count, desc, eq, ilike, or } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 
 import { db } from '$lib/server/db';
@@ -11,6 +11,7 @@ import type { Actions, PageServerLoad } from './$types';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const usernamePattern = /^[a-z0-9._-]{3,64}$/;
+const pageSize = 10;
 
 function value(form: FormData, field: string) {
 	const input = form.get(field);
@@ -21,14 +22,25 @@ function validRole(role: string): role is Role {
 	return roles.includes(role as Role);
 }
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const access = await requireRole(locals, ['superadmin']);
+	const search = url.searchParams.get('q')?.trim() ?? '';
+	const requestedPage = Number.parseInt(url.searchParams.get('page') ?? '1', 10);
+	const filter = search
+		? or(ilike(user.name, `%${search}%`), ilike(user.username, `%${search}%`), ilike(user.email, `%${search}%`))
+		: undefined;
+	const [{ total }] = await db.select({ total: count() }).from(user).where(filter);
+	const totalPages = Math.max(1, Math.ceil(total / pageSize));
+	const page = Math.min(Math.max(Number.isFinite(requestedPage) ? requestedPage : 1, 1), totalPages);
 	const users = await db
 		.select({ id: user.id, name: user.name, username: user.username, email: user.email, role: user.role, createdAt: user.createdAt })
 		.from(user)
-		.orderBy(desc(user.createdAt));
+		.where(filter)
+		.orderBy(desc(user.createdAt))
+		.limit(pageSize)
+		.offset((page - 1) * pageSize);
 
-	return { ...access, users };
+	return { ...access, users, search, pagination: { page, pageSize, total, totalPages } };
 };
 
 export const actions: Actions = {
@@ -63,7 +75,7 @@ export const actions: Actions = {
 			});
 		});
 
-		redirect(303, url.pathname);
+		redirect(303, `${url.pathname}${url.search}`);
 	},
 
 	update: async ({ request, locals, url }) => {
@@ -87,7 +99,7 @@ export const actions: Actions = {
 		if (existingUsername && existingUsername.id !== userId) return fail(409, { error: 'Username tersebut sudah digunakan.' });
 
 		await db.update(user).set({ name, username, role, updatedAt: new Date() }).where(eq(user.id, userId));
-		redirect(303, url.pathname);
+		redirect(303, `${url.pathname}${url.search}`);
 	},
 
 	delete: async ({ request, locals, url }) => {
@@ -97,6 +109,6 @@ export const actions: Actions = {
 		if (userId === access.userId) return fail(400, { error: 'Akun sendiri tidak dapat dihapus.' });
 
 		await db.delete(user).where(eq(user.id, userId));
-		redirect(303, url.pathname);
+		redirect(303, `${url.pathname}${url.search}`);
 	}
 };

@@ -3,9 +3,21 @@
 
 	const field = 'mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary';
 	const roles = ['user', 'admin', 'superadmin'];
+	const pageNumbers = $derived(
+		Array.from({ length: data.pagination.totalPages }, (_, index) => index + 1).filter(
+			(page) => page === 1 || page === data.pagination.totalPages || Math.abs(page - data.pagination.page) <= 1
+		)
+	);
 
 	function formattedDate(date: Date) {
 		return new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(new Date(date));
+	}
+
+	function pageHref(page: number) {
+		const params = new URLSearchParams();
+		if (data.search) params.set('q', data.search);
+		params.set('page', String(page));
+		return `?${params.toString()}`;
 	}
 </script>
 
@@ -39,7 +51,17 @@
 		</form>
 
 		<div class="mt-6 overflow-hidden rounded-2xl border bg-card">
-			<div class="border-b px-5 py-4 md:px-6"><h2 class="font-semibold">Daftar pengguna</h2></div>
+			<div class="flex flex-col gap-3 border-b px-5 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+				<div>
+					<h2 class="font-semibold">Daftar pengguna</h2>
+					<p class="mt-0.5 text-xs text-muted-foreground">{data.pagination.total} pengguna ditemukan</p>
+				</div>
+				<form method="GET" class="flex w-full gap-2 md:w-auto">
+					<input class="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary md:w-64" name="q" value={data.search} placeholder="Cari nama, username, email…" />
+					<button class="rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted" type="submit">Cari</button>
+					{#if data.search}<a class="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground" href="?">Reset</a>{/if}
+				</form>
+			</div>
 			<div class="divide-y">
 				{#each data.users as account (account.id)}
 					<div class="p-5 md:px-6">
@@ -74,8 +96,23 @@
 							{/if}
 						</div>
 					</div>
+				{:else}
+					<p class="px-5 py-10 text-center text-sm text-muted-foreground">Tidak ada pengguna yang cocok.</p>
 				{/each}
 			</div>
+			{#if data.pagination.totalPages > 1}
+				<nav class="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-4 md:px-6" aria-label="Pagination pengguna">
+					<p class="text-xs text-muted-foreground">Halaman {data.pagination.page} dari {data.pagination.totalPages}</p>
+					<div class="flex items-center gap-1">
+						<a href={pageHref(data.pagination.page - 1)} aria-disabled={data.pagination.page === 1} class="rounded-lg border px-3 py-1.5 text-sm font-medium transition hover:bg-muted aria-disabled:pointer-events-none aria-disabled:opacity-40">Sebelumnya</a>
+						{#each pageNumbers as page, index (page)}
+							{#if index > 0 && page - pageNumbers[index - 1] > 1}<span class="px-1 text-muted-foreground">…</span>{/if}
+							<a href={pageHref(page)} aria-current={page === data.pagination.page ? 'page' : undefined} class="flex size-8 items-center justify-center rounded-lg text-sm font-medium transition hover:bg-muted aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground">{page}</a>
+						{/each}
+						<a href={pageHref(data.pagination.page + 1)} aria-disabled={data.pagination.page === data.pagination.totalPages} class="rounded-lg border px-3 py-1.5 text-sm font-medium transition hover:bg-muted aria-disabled:pointer-events-none aria-disabled:opacity-40">Berikutnya</a>
+					</div>
+				</nav>
+			{/if}
 		</div>
 	</div>
 </section>
