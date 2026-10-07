@@ -20,7 +20,19 @@
 	];
 
 	const tabClass = 'flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium';
+
+	function preventContextMenu(event: MouseEvent) {
+		event.preventDefault();
+	}
+
+	function preventBrowserActions(event: KeyboardEvent) {
+		if ((event.ctrlKey || event.metaKey) && ['p', 's'].includes(event.key.toLowerCase())) {
+			event.preventDefault();
+		}
+	}
 </script>
+
+<svelte:window oncontextmenu={preventContextMenu} onkeydown={preventBrowserActions} />
 
 <div class="flex h-dvh bg-muted font-sans md:p-4">
 	<div
