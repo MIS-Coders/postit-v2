@@ -23,6 +23,7 @@
 
 	let { user, role }: Props = $props();
 	let tabs = $derived([
+		{ href: '/chatbot', label: 'Chatbot' },
 		...documentTabs,
 		...(role === 'ms' || role === 'superadmin' ? [{ href: '/upload', label: 'Upload SOP' }] : []),
 		...(role === 'admin' || role === 'superadmin' ? [{ href: '/users', label: 'Data User' }] : [])

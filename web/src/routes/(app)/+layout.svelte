@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import RiBookOpenLine from 'remixicon-svelte/icons/book-open-line';
+	import RiChat3Line from 'remixicon-svelte/icons/chat-3-line';
 	import RiFileList3Line from 'remixicon-svelte/icons/file-list-3-line';
 	import RiSparkling2Line from 'remixicon-svelte/icons/sparkling-2-line';
 
@@ -14,7 +15,8 @@
 
 	const mobileTabs = [
 		{ href: '/sop', label: 'SOP/IK', icon: RiBookOpenLine },
-		{ href: '/formulir', label: 'Formulir', icon: RiFileList3Line }
+		{ href: '/formulir', label: 'Formulir', icon: RiFileList3Line },
+		{ href: '/chatbot', label: 'Chatbot', icon: RiChat3Line }
 	];
 
 	const tabClass = 'flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium';

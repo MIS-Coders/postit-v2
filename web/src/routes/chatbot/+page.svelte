@@ -3,6 +3,7 @@
 	import { onMount, tick } from 'svelte';
 	import RiArrowRightUpLine from 'remixicon-svelte/icons/arrow-right-up-line';
 	import RiArrowUpLine from 'remixicon-svelte/icons/arrow-up-line';
+	import RiBookOpenLine from 'remixicon-svelte/icons/book-open-line';
 	import RiCalendarCheckLine from 'remixicon-svelte/icons/calendar-check-line';
 	import RiChatNewLine from 'remixicon-svelte/icons/chat-new-line';
 	import RiFileList3Line from 'remixicon-svelte/icons/file-list-3-line';
@@ -180,6 +181,13 @@
 		</div>
 
 		<div class="ml-auto flex items-center gap-2">
+			<a
+				href="/sop"
+				class="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition hover:border-primary/40 hover:text-primary"
+			>
+				<RiBookOpenLine class="size-4" />
+				<span class="hidden sm:inline">Buka SOP</span>
+			</a>
 			{#if messages.length}
 				<button
 					type="button"
