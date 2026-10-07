@@ -2,7 +2,9 @@
 	import { page } from '$app/state';
 	import RiArrowLeftLine from 'remixicon-svelte/icons/arrow-left-line';
 	import RiCustomerService2Line from 'remixicon-svelte/icons/customer-service-2-line';
+	import RiLogoutBoxRLine from 'remixicon-svelte/icons/logout-box-r-line';
 	import RiSearchLine from 'remixicon-svelte/icons/search-line';
+	import RiUser3Line from 'remixicon-svelte/icons/user-3-line';
 
 	import { ui } from '$lib/state/ui.svelte';
 	import { cn } from '$lib/utils';
@@ -21,7 +23,7 @@
 	}
 
 	let { user, role }: Props = $props();
-	let tabs = $derived(role === 'superadmin' ? [...baseTabs, { href: '/users', label: 'Pengguna' }] : baseTabs);
+	let tabs = $derived(role === 'superadmin' ? [...baseTabs, { href: '/users', label: 'Data User' }] : baseTabs);
 
 	let searchEl = $state<HTMLInputElement | null>(null);
 
@@ -48,11 +50,7 @@
 		<span class="hidden h-6 w-px bg-border md:block"></span>
 
 		<a href="/sop" class="flex items-center gap-2">
-			<span
-				class="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground shadow-sm shadow-primary/30"
-			>
-				P
-			</span>
+			<img src="/brand/postit-mis-favicon.png" alt="PostIt" class="size-8 rounded-lg shadow-sm shadow-primary/30" />
 			<span class="text-lg font-semibold tracking-tight">PostIt</span>
 		</a>
 		<span
@@ -101,9 +99,17 @@
 		<ThemeToggle />
 
 		{#if user}
-			<form method="POST" action="/logout" class="hidden md:block">
-				<button type="submit" class="max-w-32 truncate text-sm font-medium text-muted-foreground transition hover:text-foreground" title={user.email}>
-					{user.name}
+			<a
+				href="/profile"
+				class="flex size-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground md:w-auto md:max-w-36 md:gap-1.5 md:px-2"
+				title="Profil saya"
+			>
+				<RiUser3Line class="size-4 shrink-0" />
+				<span class="hidden truncate text-sm font-medium md:inline">{user.name}</span>
+			</a>
+			<form method="POST" action="/logout">
+				<button type="submit" class="flex size-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground" title="Keluar" aria-label="Keluar">
+					<RiLogoutBoxRLine class="size-4" />
 				</button>
 			</form>
 		{:else}
