@@ -11,19 +11,22 @@
 
 	import ThemeToggle from './theme-toggle.svelte';
 
-	const baseTabs = [
+	const documentTabs = [
 		{ href: '/sop', label: 'SOP/IK' },
-		{ href: '/formulir', label: 'SOP Formulir' },
-		{ href: '/upload', label: 'Upload SOP' }
+		{ href: '/formulir', label: 'SOP Formulir' }
 	];
 
 	interface Props {
 		user: { name: string; email: string } | null;
-		role: 'user' | 'admin' | 'superadmin' | null;
+		role: 'user' | 'ms' | 'admin' | 'superadmin' | null;
 	}
 
 	let { user, role }: Props = $props();
-	let tabs = $derived(role === 'superadmin' ? [...baseTabs, { href: '/users', label: 'Data User' }] : baseTabs);
+	let tabs = $derived([
+		...documentTabs,
+		...(role === 'ms' || role === 'superadmin' ? [{ href: '/upload', label: 'Upload SOP' }] : []),
+		...(role === 'admin' || role === 'superadmin' ? [{ href: '/users', label: 'Data User' }] : [])
+	]);
 
 	let searchEl = $state<HTMLInputElement | null>(null);
 

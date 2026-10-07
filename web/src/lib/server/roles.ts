@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema';
 
-export const roles = ['user', 'admin', 'superadmin'] as const;
+export const roles = ['user', 'ms', 'admin', 'superadmin'] as const;
 export type Role = (typeof roles)[number];
 
 export async function getRole(userId: string): Promise<Role> {

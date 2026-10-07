@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { hashPassword } from 'better-auth/crypto';
-import { count, desc, eq, ilike, or } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, ne, or } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 
 import { db } from '$lib/server/db';
@@ -22,13 +22,24 @@ function validRole(role: string): role is Role {
 	return roles.includes(role as Role);
 }
 
+function canAssignRole(actor: Role, role: Role) {
+	return actor === 'superadmin' || role !== 'superadmin';
+}
+
 export const load: PageServerLoad = async ({ locals, url }) => {
-	const access = await requireRole(locals, ['superadmin']);
+	const access = await requireRole(locals, ['admin', 'superadmin']);
 	const search = url.searchParams.get('q')?.trim() ?? '';
+	const requestedRole = url.searchParams.get('role') ?? '';
+	const roleFilter = validRole(requestedRole) ? requestedRole : null;
 	const requestedPage = Number.parseInt(url.searchParams.get('page') ?? '1', 10);
-	const filter = search
+	const searchFilter = search
 		? or(ilike(user.name, `%${search}%`), ilike(user.username, `%${search}%`), ilike(user.email, `%${search}%`))
 		: undefined;
+	const filter = and(
+		searchFilter,
+		roleFilter ? eq(user.role, roleFilter) : undefined,
+		access.role === 'admin' ? ne(user.role, 'superadmin') : undefined
+	);
 	const [{ total }] = await db.select({ total: count() }).from(user).where(filter);
 	const totalPages = Math.max(1, Math.ceil(total / pageSize));
 	const page = Math.min(Math.max(Number.isFinite(requestedPage) ? requestedPage : 1, 1), totalPages);
@@ -40,12 +51,20 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.limit(pageSize)
 		.offset((page - 1) * pageSize);
 
-	return { ...access, users, search, pagination: { page, pageSize, total, totalPages } };
+	return {
+		...access,
+		users,
+		search,
+		roleFilter,
+		allRoles: roles,
+		assignableRoles: access.role === 'superadmin' ? roles : roles.filter((role) => role !== 'superadmin'),
+		pagination: { page, pageSize, total, totalPages }
+	};
 };
 
 export const actions: Actions = {
 	create: async ({ request, locals, url }) => {
-		await requireRole(locals, ['superadmin']);
+		const access = await requireRole(locals, ['admin', 'superadmin']);
 		const form = await request.formData();
 		const name = value(form, 'name');
 		const username = value(form, 'username').toLowerCase();
@@ -53,7 +72,7 @@ export const actions: Actions = {
 		const password = value(form, 'password');
 		const role = value(form, 'role');
 
-		if (!name || !usernamePattern.test(username) || !emailPattern.test(email) || password.length < 8 || !validRole(role)) {
+		if (!name || !usernamePattern.test(username) || !emailPattern.test(email) || password.length < 8 || !validRole(role) || !canAssignRole(access.role, role)) {
 			return fail(400, { error: 'Isi nama, username valid, email valid, password minimal 8 karakter, dan role dengan benar.' });
 		}
 
@@ -79,17 +98,20 @@ export const actions: Actions = {
 	},
 
 	update: async ({ request, locals, url }) => {
-		const access = await requireRole(locals, ['superadmin']);
+		const access = await requireRole(locals, ['admin', 'superadmin']);
 		const form = await request.formData();
 		const userId = value(form, 'userId');
 		const name = value(form, 'name');
 		const username = value(form, 'username').toLowerCase();
 		const role = value(form, 'role');
 
-		if (!userId || !name || !usernamePattern.test(username) || !validRole(role)) return fail(400, { error: 'Data pengguna tidak valid.' });
+		if (!userId || !name || !usernamePattern.test(username) || !validRole(role) || !canAssignRole(access.role, role)) return fail(400, { error: 'Data pengguna tidak valid.' });
 		if (userId === access.userId && role !== access.role) {
 			return fail(400, { error: 'Role akun sendiri tidak dapat diubah dari halaman ini.' });
 		}
+		const [target] = await db.select({ role: user.role }).from(user).where(eq(user.id, userId)).limit(1);
+		if (!target) return fail(404, { error: 'Pengguna tidak ditemukan.' });
+		if (access.role === 'admin' && target.role === 'superadmin') return fail(403, { error: 'Admin tidak dapat mengubah akun superadmin.' });
 
 		const [existingUsername] = await db
 			.select({ id: user.id })
@@ -103,10 +125,13 @@ export const actions: Actions = {
 	},
 
 	delete: async ({ request, locals, url }) => {
-		const access = await requireRole(locals, ['superadmin']);
+		const access = await requireRole(locals, ['admin', 'superadmin']);
 		const userId = value(await request.formData(), 'userId');
 		if (!userId) return fail(400, { error: 'Pengguna tidak ditemukan.' });
 		if (userId === access.userId) return fail(400, { error: 'Akun sendiri tidak dapat dihapus.' });
+		const [target] = await db.select({ role: user.role }).from(user).where(eq(user.id, userId)).limit(1);
+		if (!target) return fail(404, { error: 'Pengguna tidak ditemukan.' });
+		if (access.role === 'admin' && target.role === 'superadmin') return fail(403, { error: 'Admin tidak dapat menghapus akun superadmin.' });
 
 		await db.delete(user).where(eq(user.id, userId));
 		redirect(303, `${url.pathname}${url.search}`);

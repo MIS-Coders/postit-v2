@@ -9,7 +9,7 @@ import type { Actions, PageServerLoad } from './$types';
 const maxPdfSize = 25 * 1024 * 1024;
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-	const access = await requireRole(locals, ['admin', 'superadmin']);
+	const access = await requireRole(locals, ['ms', 'superadmin']);
 	const { departements, docs } = listSop('READ');
 	const jobId = url.searchParams.get('job');
 	let job = null;
@@ -31,7 +31,7 @@ function textValue(value: FormDataEntryValue | null) {
 
 export const actions: Actions = {
 	upload: async ({ request, locals, url }) => {
-		await requireRole(locals, ['admin', 'superadmin']);
+		await requireRole(locals, ['ms', 'superadmin']);
 		const form = await request.formData();
 		const pdf = form.get('pdf');
 		const namaDokumen = textValue(form.get('namaDokumen'));

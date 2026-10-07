@@ -2,7 +2,6 @@
 	let { data, form } = $props();
 
 	const field = 'mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary';
-	const roles = ['user', 'admin', 'superadmin'];
 	const pageNumbers = $derived(
 		Array.from({ length: data.pagination.totalPages }, (_, index) => index + 1).filter(
 			(page) => page === 1 || page === data.pagination.totalPages || Math.abs(page - data.pagination.page) <= 1
@@ -16,6 +15,7 @@
 	function pageHref(page: number) {
 		const params = new URLSearchParams();
 		if (data.search) params.set('q', data.search);
+		if (data.roleFilter) params.set('role', data.roleFilter);
 		params.set('page', String(page));
 		return `?${params.toString()}`;
 	}
@@ -43,7 +43,7 @@
 				<label class="text-sm font-medium">Password awal<input class={field} name="password" type="password" minlength="8" autocomplete="new-password" required /></label>
 				<label class="text-sm font-medium">Role
 					<select class={field} name="role" value="user">
-						{#each roles as role}<option value={role}>{role}</option>{/each}
+						{#each data.assignableRoles as role}<option value={role}>{role}</option>{/each}
 					</select>
 				</label>
 			</div>
@@ -56,10 +56,14 @@
 					<h2 class="font-semibold">Daftar pengguna</h2>
 					<p class="mt-0.5 text-xs text-muted-foreground">{data.pagination.total} pengguna ditemukan</p>
 				</div>
-				<form method="GET" class="flex w-full gap-2 md:w-auto">
+				<form method="GET" class="flex w-full flex-wrap gap-2 md:w-auto md:flex-nowrap">
 					<input class="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary md:w-64" name="q" value={data.search} placeholder="Cari nama, username, email…" />
+					<select class="rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary" name="role" value={data.roleFilter ?? ''}>
+						<option value="">Semua role</option>
+						{#each data.allRoles as role}<option value={role}>{role}</option>{/each}
+					</select>
 					<button class="rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted" type="submit">Cari</button>
-					{#if data.search}<a class="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground" href="?">Reset</a>{/if}
+					{#if data.search || data.roleFilter}<a class="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground" href="?">Reset</a>{/if}
 				</form>
 			</div>
 			<div class="divide-y">
@@ -74,11 +78,11 @@
 								{#if account.id === data.userId}
 									<input name="role" type="hidden" value={account.role} />
 									<select class={field} value={account.role} disabled>
-										{#each roles as role}<option value={role}>{role}</option>{/each}
+										{#each data.assignableRoles as role}<option value={role}>{role}</option>{/each}
 									</select>
 								{:else}
 									<select class={field} name="role" value={account.role}>
-										{#each roles as role}<option value={role}>{role}</option>{/each}
+										{#each data.assignableRoles as role}<option value={role}>{role}</option>{/each}
 									</select>
 								{/if}
 							</label>
