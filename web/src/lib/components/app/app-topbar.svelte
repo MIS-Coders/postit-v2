@@ -9,7 +9,7 @@
 
 	import ThemeToggle from './theme-toggle.svelte';
 
-	const tabs = [
+	const baseTabs = [
 		{ href: '/sop', label: 'SOP/IK' },
 		{ href: '/formulir', label: 'SOP Formulir' },
 		{ href: '/upload', label: 'Upload SOP' }
@@ -17,9 +17,11 @@
 
 	interface Props {
 		user: { name: string; email: string } | null;
+		role: 'user' | 'admin' | 'superadmin' | null;
 	}
 
-	let { user }: Props = $props();
+	let { user, role }: Props = $props();
+	let tabs = $derived(role === 'superadmin' ? [...baseTabs, { href: '/users', label: 'Pengguna' }] : baseTabs);
 
 	let searchEl = $state<HTMLInputElement | null>(null);
 

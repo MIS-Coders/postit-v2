@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { marked } from 'marked';
-	import { tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import RiArrowRightUpLine from 'remixicon-svelte/icons/arrow-right-up-line';
 	import RiArrowUpLine from 'remixicon-svelte/icons/arrow-up-line';
 	import RiCalendarCheckLine from 'remixicon-svelte/icons/calendar-check-line';
@@ -65,6 +65,13 @@
 		{ icon: RiShoppingCart2Line, text: 'Siapa yang menyetujui pengadaan barang?' }
 	];
 
+	const greetings = [
+		'Halo!',
+		'Hai, selamat datang!',
+		'Ada yang ingin dicari?',
+		'Mari kita selesaikan bersama.'
+	];
+
 	let messages = $state<Message[]>([]);
 	let query = $state('');
 	let chatMode = $state('explain');
@@ -73,6 +80,15 @@
 	let scroller = $state<HTMLElement | null>(null);
 	let input = $state<HTMLTextAreaElement | null>(null);
 	let request: AbortController | null = null;
+	let greetingIndex = $state(0);
+
+	onMount(() => {
+		const greetingTimer = window.setInterval(() => {
+			greetingIndex = (greetingIndex + 1) % greetings.length;
+		}, 3600);
+
+		return () => window.clearInterval(greetingTimer);
+	});
 
 	async function scrollToBottom() {
 		await tick();
@@ -189,9 +205,12 @@
 						></div>
 						<ChatMascot class="w-24 tall:w-32 tall:md:w-44" interactive />
 						<div
-							class="absolute -top-2 -left-11 rounded-2xl rounded-br-md bg-card px-3 py-1.5 text-sm font-semibold shadow-lg ring-1 ring-border tall:-top-3 tall:-left-12 tall:px-4 tall:py-2 tall:text-base tall:md:-left-16"
+							class="absolute -top-2 -left-11 max-w-48 rounded-2xl rounded-br-md bg-card px-3 py-1.5 text-left text-sm font-semibold shadow-lg ring-1 ring-border tall:-top-3 tall:-left-12 tall:max-w-56 tall:px-4 tall:py-2 tall:text-base tall:md:-left-16"
 						>
-							Halo!
+							{#key greetingIndex}
+								<span class="greeting-word">{greetings[greetingIndex]}</span>
+							{/key}
+							<span class="typing-cursor" aria-hidden="true"></span>
 						</div>
 					</div>
 
@@ -382,3 +401,47 @@
 		</p>
 	</footer>
 </div>
+
+<style>
+	.greeting-word {
+		display: inline-block;
+		animation: greeting-arrive 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+	}
+
+	.typing-cursor {
+		display: inline-block;
+		width: 2px;
+		height: 1em;
+		margin-left: 3px;
+		vertical-align: -0.12em;
+		border-radius: 999px;
+		background: hsl(var(--primary));
+		animation: cursor-blink 900ms steps(2, start) infinite;
+	}
+
+	@keyframes greeting-arrive {
+		from {
+			opacity: 0;
+			transform: translateY(7px) scale(0.96);
+			filter: blur(3px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+			filter: blur(0);
+		}
+	}
+
+	@keyframes cursor-blink {
+		50% {
+			opacity: 0;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.greeting-word,
+		.typing-cursor {
+			animation: none;
+		}
+	}
+</style>

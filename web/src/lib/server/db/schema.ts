@@ -1,11 +1,30 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, index, integer } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
+  legacyId: integer("legacy_id").unique(),
   name: text("name").notNull(),
+  username: text("username").unique(),
   email: text("email").notNull().unique(),
 	role: text("role").notNull().default("user"),
+	// Profil dari tabel `user` aplikasi PostIt lama.
+	nik: text("nik"),
+	nama: text("nama"),
+	idSbu: integer("id_sbu"),
+	idDepartement: integer("id_departement"),
+	idLevel: integer("id_level"),
+	jk: text("jk"),
+	levelSys: text("level_sys"),
+	foto: text("foto"),
+	remark: text("remark"),
+	inputByUserId: integer("input_by_userid"),
+	inputDate: timestamp("input_date"),
+	editByUserId: integer("edit_by_userid"),
+	editDate: timestamp("edit_date"),
+	voidByUserId: integer("void_by_userid"),
+	voidDate: timestamp("void_date"),
+	voidStatus: integer("void_status"),
   emailVerified: boolean("email_verified").default(false).notNull(),
   image: text("image"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
