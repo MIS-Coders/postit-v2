@@ -32,7 +32,7 @@
 
 	const firstName = $derived.by(() => {
 		const rawName = user?.name?.trim();
-		if (!rawName) return 'teman';
+		if (!rawName) return '';
 		return rawName.split(/\s+/)[0];
 	});
 
