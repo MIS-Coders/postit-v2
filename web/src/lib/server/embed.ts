@@ -11,6 +11,9 @@ interface StartEmbedInput {
 	filename: string;
 	documentId: number;
 	department: string;
+	documentType: 'READ' | 'FORM';
+	documentName: string;
+	documentNumber: string;
 }
 
 const apiUrl = () => (env.EMBED_API_URL || env.PUBLIC_API_URL || 'http://localhost:3018').replace(/\/$/, '');

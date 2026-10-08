@@ -15,6 +15,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from sqlalchemy import create_engine, text
 
 from embed_service import embed_pdf
+from hybrid_search import hybrid_search
 
 load_dotenv()
 app = Flask(__name__)
@@ -85,7 +86,15 @@ def update_embed_job(job_id, status, message, chunks=None):
         )
 
 
-def run_embed_job(job_id, filename, document_id, department):
+def run_embed_job(
+    job_id,
+    filename,
+    document_id,
+    department,
+    document_type,
+    document_name,
+    document_number,
+):
     try:
         # Voyage punya batas token per menit; satu job pada satu waktu menjaga hasil stabil.
         with embed_lock:
@@ -97,6 +106,9 @@ def run_embed_job(job_id, filename, document_id, department):
                 source=f"sop/{document_id}/{filename}",
                 department=department,
                 document_id=document_id,
+                document_type=document_type,
+                document_name=document_name,
+                document_number=document_number,
             )
             update_embed_job(job_id, "completed", "Embedding selesai.", chunks)
     except Exception as exc:
@@ -113,6 +125,9 @@ def start_embed_job():
     filename = data.get("filename")
     document_id = data.get("documentId")
     department = data.get("department")
+    document_type = data.get("documentType", "READ")
+    document_name = data.get("documentName")
+    document_number = data.get("documentNumber")
 
     if (
         not isinstance(filename, str)
@@ -122,6 +137,9 @@ def start_embed_job():
         or document_id <= 0
         or not isinstance(department, str)
         or not department.strip()
+        or document_type not in {"READ", "FORM"}
+        or (document_name is not None and not isinstance(document_name, str))
+        or (document_number is not None and not isinstance(document_number, str))
     ):
         return jsonify({"error": "Data job embed tidak valid."}), 400
 
@@ -140,7 +158,19 @@ def start_embed_job():
             {"id": job_id, "document_id": document_id},
         )
 
-    Thread(target=run_embed_job, args=(job_id, filename, document_id, department), daemon=True).start()
+    Thread(
+        target=run_embed_job,
+        args=(
+            job_id,
+            filename,
+            document_id,
+            department,
+            document_type,
+            document_name,
+            document_number,
+        ),
+        daemon=True,
+    ).start()
     return jsonify({"id": job_id, "status": "queued", "message": "Menunggu antrean embedding…"}), 202
 
 
@@ -299,21 +329,9 @@ def chat():
     if department_filter == "All":
         department_filter = None
 
-    # READ lama belum selalu punya metadata type_doc. Ambil kandidat lebih banyak lalu
-    # singkirkan FORM di aplikasi; FORM baru aman difilter langsung lewat metadata.
-    search_kwargs = {"k": 20 if document_type == "READ" else 5}
-    metadata_filters = []
+    db_department_name = None
     if department_filter:
         db_department_name = DEPARTMENT_MAPPING.get(department_filter, department_filter)
-        metadata_filters.append({"department": {"$eq": db_department_name}})
-    if document_type == "FORM":
-        metadata_filters.append({"type_doc": {"$eq": "FORM"}})
-    if len(metadata_filters) == 1:
-        search_kwargs["filter"] = metadata_filters[0]
-    elif metadata_filters:
-        search_kwargs["filter"] = {"$and": metadata_filters}
-
-    retriever = vector_store.as_retriever(search_kwargs=search_kwargs)
     
     # define chat mode
     if chat_mode == "reference":
@@ -345,9 +363,14 @@ def chat():
     ])
     
     # Retrieval dijalankan lebih dulu supaya daftar sumbernya bisa dikirim lewat header
-    docs = retriever.invoke(user_query)
-    if document_type == "READ":
-        docs = [doc for doc in docs if doc.metadata.get("type_doc", "READ") != "FORM"][:5]
+    docs = hybrid_search(
+        vector_store=vector_store,
+        engine=job_engine,
+        query=user_query,
+        department=db_department_name,
+        document_type=document_type,
+        limit=5,
+    )
 
     # Construct the RAG Chain
     rag_chain = prompt | llm

@@ -63,13 +63,18 @@ export const actions: Actions = {
 				filename: pdf.name,
 				pdf: new Uint8Array(await pdf.arrayBuffer())
 			});
-			if (type === 'READ') {
-				const department = listSop('READ').departements.find((item) => item.id === doc.departement_id);
-				const filename = getSopFileName(doc.id);
-				if (!department || !filename) throw new Error('Metadata SOP tidak dapat disimpan.');
+			const department = listSop(type).departements.find((item) => item.id === doc.departement_id);
+			const filename = getSopFileName(doc.id);
+			if (!department || !filename) throw new Error('Metadata dokumen tidak dapat disimpan.');
 
-				job = await startEmbed({ filename, documentId: doc.id, department: department.nama_departement });
-			}
+			job = await startEmbed({
+				filename,
+				documentId: doc.id,
+				department: department.nama_departement,
+				documentType: doc.type_doc,
+				documentName: doc.nama_dokumen,
+				documentNumber: doc.no_dokumen
+			});
 		} catch (cause) {
 			return fail(500, { error: cause instanceof Error ? cause.message : 'Upload atau embed gagal dimulai.' });
 		}
@@ -88,7 +93,14 @@ export const actions: Actions = {
 
 		let job;
 		try {
-			job = await startEmbed({ filename, documentId: id, department: department.nama_departement });
+			job = await startEmbed({
+				filename,
+				documentId: id,
+				department: department.nama_departement,
+				documentType: doc.type_doc,
+				documentName: doc.nama_dokumen,
+				documentNumber: doc.no_dokumen
+			});
 		} catch (cause) {
 			return fail(500, { error: cause instanceof Error ? cause.message : 'Embed gagal dimulai.' });
 		}

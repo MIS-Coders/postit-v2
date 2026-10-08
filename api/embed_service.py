@@ -125,6 +125,8 @@ def embed_pdf(
     department: str,
     document_id: int,
     document_type: str = "READ",
+    document_name: str | None = None,
+    document_number: str | None = None,
     max_batch_tokens: int = SAFE_TPM_LIMIT,
     add_documents: Callable[[list[Document], int], None] | None = None,
 ) -> int:
@@ -143,20 +145,20 @@ def embed_pdf(
         if not page_text.strip():
             continue
         for chunk in TEXT_SPLITTER.split_text(page_text):
-            documents.append(
-                Document(
-                    page_content=chunk,
-                    metadata={
-                        "source": source,
-                        "file_hash": file_hash,
-                        "department": department,
-                        "sop_doc_id": str(document_id),
-                        "type_doc": document_type,
-                        "chunk": chunk_number,
-                        "pages": [page_number],
-                    },
-                )
-            )
+            metadata = {
+                "source": source,
+                "file_hash": file_hash,
+                "department": department,
+                "sop_doc_id": str(document_id),
+                "type_doc": document_type,
+                "chunk": chunk_number,
+                "pages": [page_number],
+            }
+            if document_name:
+                metadata["document_name"] = document_name
+            if document_number:
+                metadata["document_number"] = document_number
+            documents.append(Document(page_content=chunk, metadata=metadata))
             chunk_number += 1
 
     if not documents:

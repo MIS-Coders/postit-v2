@@ -67,6 +67,8 @@ def load_form_documents(metadata_path: Path, pdf_dir: Path):
                 "source": filename,
                 "pdf_path": pdf_path,
                 "department": departments.get(document.get("departement_id"), "Tanpa Departemen"),
+                "document_name": document.get("nama_dokumen"),
+                "document_number": document.get("no_dokumen"),
             }
         )
 
@@ -206,6 +208,8 @@ def main():
                 department=document["department"],
                 document_id=document["id"],
                 document_type="FORM",
+                document_name=document["document_name"],
+                document_number=document["document_number"],
                 max_batch_tokens=max_batch_tokens,
                 add_documents=lambda batch, token_count: rate_limiter.add_documents(vector_store, batch, token_count),
             )

@@ -85,7 +85,7 @@
 			<p class="mt-1 text-sm text-muted-foreground">
 				{activeTab === 'READ'
 					? 'PDF maksimal 25 MB. SOP/IK akan diproses otomatis untuk pencarian AI.'
-					: 'PDF maksimal 25 MB. Formulir tersedia di halaman Formulir dan tidak diproses untuk pencarian AI.'}
+					: 'PDF maksimal 25 MB. Formulir akan diproses otomatis untuk pencarian AI.'}
 			</p>
 
 			<div class="mt-5 grid gap-4 sm:grid-cols-2">
