@@ -35,7 +35,7 @@
 				{@render children()}
 
 				{#if ui.askAi.open !== false}
-					<AskAiPanel class={ui.askAi.open === null ? 'hidden xl:flex' : undefined} />
+					<AskAiPanel user={data.user} class={ui.askAi.open === null ? 'hidden xl:flex' : undefined} />
 				{/if}
 			</main>
 		</div>

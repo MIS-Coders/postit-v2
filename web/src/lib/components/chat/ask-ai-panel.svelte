@@ -10,7 +10,6 @@
 	import RiSparkling2Fill from 'remixicon-svelte/icons/sparkling-2-fill';
 	import RiSparkling2Line from 'remixicon-svelte/icons/sparkling-2-line';
 
-	import { currentUser } from '$lib/mock/sop';
 	import { ui } from '$lib/state/ui.svelte';
 	import { cn } from '$lib/utils';
 
@@ -19,14 +18,23 @@
 		content: string;
 	}
 
-	let { class: className }: { class?: string } = $props();
+	interface Props {
+		class?: string;
+		user?: { name: string; email: string } | null;
+	}
+
+	let { class: className, user }: Props = $props();
 
 	let messages = $state<Message[]>([]);
 	let query = $state('');
 	let isLoading = $state(false);
 	let scroller = $state<HTMLElement | null>(null);
 
-	const firstName = currentUser.nama.split(' ')[0];
+	const firstName = $derived.by(() => {
+		const rawName = user?.name?.trim();
+		if (!rawName) return 'teman';
+		return rawName.split(/\s+/)[0];
+	});
 
 	const suggestions = $derived(
 		ui.askAi.context
