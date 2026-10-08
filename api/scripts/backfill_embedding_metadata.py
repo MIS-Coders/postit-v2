@@ -44,8 +44,8 @@ def main():
                     """
                     UPDATE langchain_pg_embedding e
                     SET cmetadata = e.cmetadata || jsonb_build_object(
-                      'document_name', :document_name,
-                      'document_number', :document_number
+                      'document_name', CAST(:document_name AS text),
+                      'document_number', CAST(:document_number AS text)
                     )
                     FROM langchain_pg_collection c
                     WHERE e.collection_id = c.uuid
