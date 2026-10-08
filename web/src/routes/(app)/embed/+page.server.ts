@@ -3,6 +3,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { getEmbedJob, startEmbed } from '$lib/server/embed';
 import { createSopDocument, getSopFileName, listSop } from '$lib/server/sop';
 import { requireRole } from '$lib/server/roles';
+import type { TypeDoc } from '$lib/sop';
 
 import type { Actions, PageServerLoad } from './$types';
 
@@ -36,6 +37,7 @@ export const actions: Actions = {
 		const pdf = form.get('pdf');
 		const namaDokumen = textValue(form.get('namaDokumen'));
 		const noDokumen = textValue(form.get('noDokumen'));
+		const type = textValue(form.get('type')) as TypeDoc;
 		const departementId = Number(textValue(form.get('departementId')));
 		const noRev = Number(textValue(form.get('noRev')));
 
@@ -44,13 +46,14 @@ export const actions: Actions = {
 			return fail(400, { error: 'File harus berformat PDF.' });
 		}
 		if (pdf.size > maxPdfSize) return fail(400, { error: 'Ukuran PDF maksimal 25 MB.' });
-		if (!namaDokumen || !noDokumen || !Number.isInteger(departementId) || !Number.isInteger(noRev) || noRev < 0) {
+		if (!['READ', 'FORM'].includes(type) || !namaDokumen || !noDokumen || !Number.isInteger(departementId) || !Number.isInteger(noRev) || noRev < 0) {
 			return fail(400, { error: 'Lengkapi metadata dokumen dengan benar.' });
 		}
 
 		let job;
 		try {
 			const doc = await createSopDocument({
+				type,
 				departementId,
 				namaDokumen,
 				noDokumen,
@@ -60,15 +63,17 @@ export const actions: Actions = {
 				filename: pdf.name,
 				pdf: new Uint8Array(await pdf.arrayBuffer())
 			});
-			const department = listSop('READ').departements.find((item) => item.id === doc.departement_id);
-			const filename = getSopFileName(doc.id);
-			if (!department || !filename) throw new Error('Metadata SOP tidak dapat disimpan.');
+			if (type === 'READ') {
+				const department = listSop('READ').departements.find((item) => item.id === doc.departement_id);
+				const filename = getSopFileName(doc.id);
+				if (!department || !filename) throw new Error('Metadata SOP tidak dapat disimpan.');
 
-			job = await startEmbed({ filename, documentId: doc.id, department: department.nama_departement });
+				job = await startEmbed({ filename, documentId: doc.id, department: department.nama_departement });
+			}
 		} catch (cause) {
 			return fail(500, { error: cause instanceof Error ? cause.message : 'Upload atau embed gagal dimulai.' });
 		}
-		redirect(303, `${url.pathname}?job=${job.id}`);
+		redirect(303, job ? `${url.pathname}?job=${job.id}` : url.pathname);
 	},
 
 	reembed: async ({ request, locals, url }) => {

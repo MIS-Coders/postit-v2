@@ -44,7 +44,7 @@
 		{doc}
 		{departement}
 		{initialPage}
-		canAskAi={type === 'READ'}
+		canAskAi={true}
 		canPrint={type === 'FORM'}
 	/>
 </div>

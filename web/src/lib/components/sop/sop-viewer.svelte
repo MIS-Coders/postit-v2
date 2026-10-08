@@ -21,7 +21,7 @@
 		doc: SopDoc | null;
 		departement: Departement | null;
 		initialPage?: number;
-		// Formulir tidak di-index RAG (PLAN §6.1), jadi tombol Tanya AI disembunyikan.
+		// Ditampilkan untuk dokumen yang tersedia di indeks RAG.
 		canAskAi: boolean;
 		canPrint: boolean;
 	}

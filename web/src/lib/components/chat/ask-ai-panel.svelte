@@ -73,7 +73,11 @@
 			const response = await fetch('/api/chat', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ query: payload, department: null })
+				body: JSON.stringify({
+					query: payload,
+					department: null,
+					documentType: ctx?.type_doc ?? null
+				})
 			});
 			if (!response.ok || !response.body) throw new Error('Gagal terhubung ke API Chatbot.');
 
@@ -162,7 +166,7 @@
 					<RiSparkling2Fill class="size-7 short:size-5" />
 				</span>
 				<p class="mt-6 text-2xl font-semibold text-primary short:mt-3 short:text-xl">Hai, {firstName}</p>
-				<p class="mt-1 text-lg font-medium short:text-base">Ada yang bisa dibantu soal SOP?</p>
+				<p class="mt-1 text-lg font-medium short:text-base">Ada yang bisa dibantu soal SOP/IK atau Formulir?</p>
 
 				<p class="mt-14 text-sm text-muted-foreground short:mt-5">Saran:</p>
 				<div class="mt-3 flex flex-col items-center gap-2 short:mt-2 short:gap-1.5">
@@ -196,7 +200,7 @@
 							{:else}
 								<p class="flex items-center gap-2 pt-1 text-sm text-muted-foreground">
 									<span class="size-1.5 animate-pulse rounded-full bg-primary"></span>
-									Mencari di SOP…
+									Mencari dokumen…
 								</p>
 							{/if}
 						</div>
@@ -231,7 +235,7 @@
 		>
 			<input
 				bind:value={query}
-				placeholder="Tanyakan sesuatu tentang SOP…"
+				placeholder="Tanyakan tentang SOP/IK atau Formulir…"
 				disabled={isLoading}
 				class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm placeholder:text-muted-foreground focus:ring-0"
 			/>

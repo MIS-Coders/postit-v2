@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from pathlib import Path
 from threading import Lock, Thread
 from uuid import uuid4
@@ -158,15 +159,17 @@ def get_embed_job(job_id):
     return jsonify(dict(row))
 
 def format_docs(docs):
-    """Formats retrieved chunks with clear source, department, and page metadata."""
+    """Formats retrieved chunks with clear type, source, department, and page metadata."""
     formatted = []
     for doc in docs:
         source = doc.metadata.get("source", "Unknown")
         dept = doc.metadata.get("department", "General")
+        document_type = doc.metadata.get("type_doc", "READ")
+        type_label = "Formulir" if document_type == "FORM" else "SOP/IK"
         pages = doc.metadata.get("pages", [])
         page_str = f"Hal. {', '.join(map(str, pages))}" if pages else "Hal. N/A"
         
-        header = f"--- [Sumber: {source} | Dept: {dept} | {page_str}] ---"
+        header = f"--- [Jenis: {type_label} | Sumber: {source} | Dept: {dept} | {page_str}] ---"
         formatted.append(f"{header}\n{doc.page_content}")
     return "\n\n".join(formatted)
 
@@ -184,6 +187,7 @@ def collect_sources(docs):
                 "source": source,
                 "department": doc.metadata.get("department"),
                 "sop_doc_id": doc.metadata.get("sop_doc_id"),
+                "type_doc": doc.metadata.get("type_doc", "READ"),
                 "pages": [],
             },
         )
@@ -193,6 +197,44 @@ def collect_sources(docs):
     for entry in sources.values():
         entry["pages"].sort()
     return list(sources.values())
+
+
+def requested_document_type(data, query):
+    """Resolve an explicit UI context first, then apply the company's document terminology."""
+    explicit_type = data.get("documentType") or data.get("document_type")
+    if explicit_type in {"READ", "FORM"}:
+        return explicit_type
+
+    normalized_query = query.lower()
+    if re.search(r"\bsop\s+formulir\b", normalized_query):
+        return "FORM"
+    if (
+        re.search(r"\bsop\b", normalized_query)
+        or re.search(r"\bik\b", normalized_query)
+        or "instruksi kerja" in normalized_query
+    ):
+        return "READ"
+    if (
+        re.search(r"\bformulir\b", normalized_query)
+        or re.search(r"\bform\b", normalized_query)
+        or re.search(r"\bdokumen\b", normalized_query)
+    ):
+        return "FORM"
+    return None
+
+
+def is_creator_question(query):
+    """Answer app-credit questions without sending an unrelated query to document retrieval."""
+    normalized_query = query.lower()
+    product_terms = ("web", "website", "aplikasi", "postit", "chatbot", "sistem ini")
+    asks_creator = bool(
+        re.search(
+            r"siapa.*(?:buat|bikin|pembuat|developer|pengembang)|"
+            r"(?:dibuat|dibikin|dikembangkan).*siapa|siapa.*(?:di balik|dibalik)",
+            normalized_query,
+        )
+    )
+    return asks_creator and any(term in normalized_query for term in product_terms)
 
 # ============================================================
 # 4. Chat Endpoint
@@ -206,11 +248,20 @@ def chat():
     data = request.get_json() or {}
     user_query = data.get("query")
     department_filter = data.get("department")  # Optional metadata filter
+    document_type = requested_document_type(data, user_query) if isinstance(user_query, str) else None
     
     chat_mode = data.get("mode", "explain")
     
     if not user_query:
         return jsonify({"error": "Query is required"}), 400
+
+    if is_creator_question(user_query):
+        response = Response(
+            "Web PostIt ini dibuat oleh [Wahyu](https://wonder-kid.site) dan Alwin dari tim MIS.",
+            mimetype="text/plain; charset=utf-8",
+        )
+        response.headers["X-Chat-Sources"] = "[]"
+        return response
     
     # Mapping Departement
     DEPARTMENT_MAPPING = {
@@ -248,18 +299,29 @@ def chat():
     if department_filter == "All":
         department_filter = None
 
-    # Build search parameters with optional metadata filtering, fetch the top 3 most relevant text chunks
-    search_kwargs = {"k": 3}
+    # READ lama belum selalu punya metadata type_doc. Ambil kandidat lebih banyak lalu
+    # singkirkan FORM di aplikasi; FORM baru aman difilter langsung lewat metadata.
+    search_kwargs = {"k": 20 if document_type == "READ" else 5}
+    metadata_filters = []
     if department_filter:
         db_department_name = DEPARTMENT_MAPPING.get(department_filter, department_filter)
-        search_kwargs["filter"] = {"department": db_department_name}
+        metadata_filters.append({"department": {"$eq": db_department_name}})
+    if document_type == "FORM":
+        metadata_filters.append({"type_doc": {"$eq": "FORM"}})
+    if len(metadata_filters) == 1:
+        search_kwargs["filter"] = metadata_filters[0]
+    elif metadata_filters:
+        search_kwargs["filter"] = {"$and": metadata_filters}
 
     retriever = vector_store.as_retriever(search_kwargs=search_kwargs)
     
     # define chat mode
     if chat_mode == "reference":
         system_prompt = (
-            "Anda adalah asisten pencari referensi SOP dan IK.\n"
+            "Anda adalah Asisten AI MIS untuk pengguna internal perusahaan.\n"
+            "Basis pengetahuan dikelola oleh tim MIS, bukan diberikan oleh pengguna yang sedang bertanya.\n"
+            "Jangan pernah mengatakan 'dokumen yang Anda berikan', 'dokumen yang kamu berikan', atau kalimat sejenis.\n"
+            "Dalam mode ini, Anda bertugas mencari referensi SOP/IK dan Formulir.\n"
             "Tugas Anda HANYA mencari dan menyebutkan Nama Dokumen, Departemen, dan Nomor Halaman yang terkait dengan pertanyaan pengguna.\n"
             "DILARANG KERAS menjelaskan, merangkum, atau menjabarkan isi atau langkah-langkah dari dokumen tersebut. Cukup berikan referensi lokasinya saja dalam bentuk poin-poin singkat.\n"
             "Jika informasi tidak ditemukan, katakan 'Referensi tidak ditemukan.'\n\n"
@@ -267,10 +329,13 @@ def chat():
         )
     else:
         system_prompt = (
-            "Anda adalah asisten virtual SOP (Standard Operating Procedure) dan IK (Instruksi Kerja).\n"
-            "Jawablah pertanyaan pengguna secara akurat berdasarkan konteks dokumen yang diberikan.\n"
-            "Jika informasi tidak ditemukan dalam konteks, katakan dengan jelas bahwa Anda tidak menemukan jawabannya di dokumen SOP/IK.\n"
-            "Sebutkan nama dokumen sumber (source), departemen, dan nomor halaman jika tersedia dalam konteks.\n\n"
+            "Anda adalah Asisten AI MIS untuk pengguna internal perusahaan.\n"
+            "Anda membantu menjawab pertanyaan tentang SOP/IK dan Formulir dari basis pengetahuan internal yang dikelola oleh tim MIS.\n"
+            "Jawab langsung, natural, ringkas, dan profesional. Jangan membuka jawaban dengan 'berdasarkan dokumen' jika tidak diperlukan.\n"
+            "Jangan pernah mengatakan 'dokumen yang Anda berikan', 'dokumen yang kamu berikan', atau memberi kesan bahwa pengguna mengunggah sumbernya.\n"
+            "Gunakan hanya konteks basis pengetahuan di bawah untuk menjawab secara akurat.\n"
+            "Jika informasi tidak ditemukan, katakan 'Saya belum menemukan informasi tersebut di basis pengetahuan internal.'\n"
+            "Berikan jawaban utama terlebih dahulu, lalu sebutkan nama sumber, departemen, dan nomor halaman secara singkat jika tersedia.\n\n"
             "Konteks Dokumen:\n{context}"
         )
 
@@ -281,6 +346,8 @@ def chat():
     
     # Retrieval dijalankan lebih dulu supaya daftar sumbernya bisa dikirim lewat header
     docs = retriever.invoke(user_query)
+    if document_type == "READ":
+        docs = [doc for doc in docs if doc.metadata.get("type_doc", "READ") != "FORM"][:5]
 
     # Construct the RAG Chain
     rag_chain = prompt | llm

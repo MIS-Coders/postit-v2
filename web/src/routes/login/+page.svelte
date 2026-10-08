@@ -65,12 +65,12 @@
 					</button>
 				</form>
 
-				<div class="mt-7 border-t pt-6 text-center text-sm text-slate-500">
+				<!-- <div class="mt-7 border-t pt-6 text-center text-sm text-slate-500">
 					{mode === 'login' ? 'Belum punya akun?' : 'Sudah punya akun?'}
 					<button class="ml-1 font-semibold text-emerald-800 hover:text-emerald-950 hover:underline" type="button" onclick={() => (mode = mode === 'login' ? 'register' : 'login')}>
 						{mode === 'login' ? 'Daftar di sini' : 'Masuk sekarang'}
 					</button>
-				</div>
+				</div> -->
 			</div>
 		</section>
 	</div>

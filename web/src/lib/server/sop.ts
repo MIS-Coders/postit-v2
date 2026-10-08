@@ -68,6 +68,7 @@ export function getSopFileName(id: number): string | null {
 }
 
 export interface CreateSopDocumentInput {
+	type: TypeDoc;
 	departementId: number;
 	namaDokumen: string;
 	noDokumen: string;
@@ -84,7 +85,7 @@ function safePdfFilename(filename: string) {
 	return base;
 }
 
-/** Simpan PDF dan metadata SOP baru. Hanya dipanggil dari action admin. */
+/** Simpan PDF dan metadata dokumen baru. Hanya dipanggil dari action admin. */
 export async function createSopDocument(input: CreateSopDocumentInput): Promise<SopDoc> {
 	const data = load();
 	if (!data.departement.some((department) => department.id === input.departementId)) {
@@ -95,7 +96,7 @@ export async function createSopDocument(input: CreateSopDocumentInput): Promise<
 	const filename = `sop-${id}-${safePdfFilename(input.filename)}`;
 	const row: SopRow = {
 		id,
-		type_doc: 'READ',
+		type_doc: input.type,
 		departement_id: input.departementId,
 		nama_dokumen: input.namaDokumen,
 		no_dokumen: input.noDokumen,

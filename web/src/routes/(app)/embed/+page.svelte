@@ -7,6 +7,7 @@
 
 	let { data, form } = $props();
 	let job = $state<EmbedJob | null>(null);
+	let activeTab = $state<'READ' | 'FORM'>('READ');
 
 	$effect(() => {
 		job = data.job;
@@ -29,7 +30,7 @@
 	const field = 'mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary';
 </script>
 
-<svelte:head><title>Upload SOP · PostIt</title></svelte:head>
+<svelte:head><title>Upload Dokumen · PostIt</title></svelte:head>
 
 <section class="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-10 md:py-8">
 	<div class="mx-auto max-w-4xl">
@@ -38,8 +39,8 @@
 				<RiFileUploadLine class="size-5" />
 			</span>
 			<div>
-				<h1 class="text-2xl font-semibold tracking-tight">Upload SOP</h1>
-				<p class="mt-1 text-sm text-muted-foreground">Upload SOP/IK baru untuk diproses otomatis oleh sistem.</p>
+				<h1 class="text-2xl font-semibold tracking-tight">Upload Dokumen</h1>
+				<p class="mt-1 text-sm text-muted-foreground">Tambahkan SOP/IK atau formulir resmi untuk tiap departemen.</p>
 			</div>
 		</div>
 
@@ -58,12 +59,34 @@
 			</div>
 		{/if}
 
-		<form method="POST" action="?/upload" enctype="multipart/form-data" class="mt-6 rounded-2xl border bg-card p-5 md:p-6">
+		<div class="mt-6 flex w-fit rounded-lg bg-muted p-1" role="tablist" aria-label="Jenis dokumen">
+			<button
+				class="rounded-md px-4 py-2 text-sm font-medium transition {activeTab === 'READ' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}"
+				type="button"
+				role="tab"
+				aria-selected={activeTab === 'READ'}
+				onclick={() => (activeTab = 'READ')}
+			>Upload SOP</button>
+			<button
+				class="rounded-md px-4 py-2 text-sm font-medium transition {activeTab === 'FORM' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}"
+				type="button"
+				role="tab"
+				aria-selected={activeTab === 'FORM'}
+				onclick={() => (activeTab = 'FORM')}
+			>Upload Formulir</button>
+		</div>
+
+		<form method="POST" action="?/upload" enctype="multipart/form-data" class="mt-3 rounded-2xl border bg-card p-5 md:p-6">
+			<input name="type" type="hidden" value={activeTab} />
 			<div class="flex items-center gap-2">
 				<RiFileUploadLine class="size-5 text-primary" />
-				<h2 class="font-semibold">Upload SOP/IK baru</h2>
+				<h2 class="font-semibold">{activeTab === 'READ' ? 'Upload SOP/IK baru' : 'Upload formulir baru'}</h2>
 			</div>
-				<p class="mt-1 text-sm text-muted-foreground">PDF maksimal 25 MB. Formulir tidak diproses untuk pencarian AI.</p>
+			<p class="mt-1 text-sm text-muted-foreground">
+				{activeTab === 'READ'
+					? 'PDF maksimal 25 MB. SOP/IK akan diproses otomatis untuk pencarian AI.'
+					: 'PDF maksimal 25 MB. Formulir tersedia di halaman Formulir dan tidak diproses untuk pencarian AI.'}
+			</p>
 
 			<div class="mt-5 grid gap-4 sm:grid-cols-2">
 				<label class="text-sm font-medium">Nama dokumen<input class={field} name="namaDokumen" required /></label>
@@ -81,7 +104,7 @@
 			</div>
 
 			<button class="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90" type="submit">
-				<RiFileUploadLine class="size-4" /> Upload SOP
+				<RiFileUploadLine class="size-4" /> {activeTab === 'READ' ? 'Upload SOP' : 'Upload Formulir'}
 			</button>
 		</form>
 
