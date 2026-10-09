@@ -27,6 +27,9 @@
 		{ href: '/chatbot', label: 'Chatbot' },
 		...documentTabs,
 		...(role === 'ms' || role === 'superadmin' ? [{ href: '/upload', label: 'Upload Dokumen' }] : []),
+		...(role === 'ms' || role === 'superadmin'
+			? [{ href: '/development/chatbot-quality', label: 'AI Lab' }]
+			: []),
 		...(role === 'admin' || role === 'superadmin' ? [{ href: '/users', label: 'Data User' }] : [])
 	]);
 

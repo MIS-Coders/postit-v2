@@ -13,11 +13,15 @@ logger = logging.getLogger(__name__)
 STOPWORDS = {
     "ada",
     "adalah",
+    "aku",
     "apa",
     "apakah",
     "atau",
     "bagaimana",
+    "baru",
+    "barusan",
     "buat",
+    "cetak",
     "dalam",
     "dan",
     "dari",
@@ -26,27 +30,69 @@ STOPWORDS = {
     "dokumen",
     "form",
     "formulir",
+    "guna",
+    "gunakan",
+    "habis",
+    "harus",
     "ik",
     "ini",
+    "ijin",
+    "izin",
     "itu",
+    "kalau",
     "ke",
+    "ku",
+    "masuk",
     "mana",
     "mengenai",
     "nomor",
     "pada",
+    "pakai",
+    "permohonan",
+    "perlu",
+    "print",
     "saya",
+    "setelah",
     "siapa",
     "sop",
     "tentang",
     "untuk",
     "yang",
 }
+QUERY_EXPANSIONS = {
+    "sakit": (
+        "sick",
+        "leave",
+        "absent",
+        "cuti",
+        "absen",
+        "Leave/Absent Form",
+        "Permohonan Cuti Izin Absen",
+    ),
+}
+
+
+def _query_expansions(query: str) -> list[str]:
+    normalized_query = query.lower()
+    expansions = []
+    for term, aliases in QUERY_EXPANSIONS.items():
+        if re.search(rf"\b{re.escape(term)}\b", normalized_query):
+            expansions.extend(aliases)
+    return expansions
+
+
+def _semantic_query(query: str) -> str:
+    expansions = _query_expansions(query)
+    if not expansions:
+        return query
+    return f"{query}\nIstilah internal terkait: {', '.join(expansions)}"
 
 
 def _keyword_tsquery(query: str) -> str | None:
     """Build a safe OR query from meaningful words, document codes, and numbers."""
     tokens = []
-    for token in re.findall(r"[a-z0-9]+", query.lower()):
+    expanded_query = " ".join([query, *_query_expansions(query)])
+    for token in re.findall(r"[a-z0-9]+", expanded_query.lower()):
         if token in STOPWORDS:
             continue
         if len(token) < 3 and not token.isdigit():
@@ -54,6 +100,12 @@ def _keyword_tsquery(query: str) -> str | None:
         if token not in tokens:
             tokens.append(token)
     return " | ".join(f"{token}:*" for token in tokens[:12]) or None
+
+
+def _keyword_weight(query: str) -> float:
+    """Keyword-only hits should dominate only for explicit document codes."""
+    looks_like_code = bool(re.search(r"\b[a-z]{2,}(?:[-/][a-z0-9]+)+\b", query.lower()))
+    return 1.15 if looks_like_code else 0.35
 
 
 def _document_key(document: Document) -> tuple:
@@ -110,10 +162,10 @@ def _keyword_search(engine, query, department, document_type, limit):
         ]
 
 
-def _fuse_rankings(vector_documents, keyword_documents, limit):
+def _fuse_rankings(vector_documents, keyword_documents, query, limit):
     scores = defaultdict(float)
     documents = {}
-    for weight, ranking in ((1.0, vector_documents), (1.15, keyword_documents)):
+    for weight, ranking in ((1.0, vector_documents), (_keyword_weight(query), keyword_documents)):
         for rank, document in enumerate(ranking, start=1):
             key = _document_key(document)
             documents.setdefault(key, document)
@@ -139,7 +191,7 @@ def hybrid_search(vector_store, engine, query, department=None, document_type=No
         vector_options["filter"] = {"$and": metadata_filters}
 
     try:
-        vector_documents = vector_store.similarity_search(query, **vector_options)
+        vector_documents = vector_store.similarity_search(_semantic_query(query), **vector_options)
         if document_type == "READ":
             vector_documents = [
                 document
@@ -163,4 +215,4 @@ def hybrid_search(vector_store, engine, query, department=None, document_type=No
         # Vector retrieval tetap melayani chat jika index/migration keyword belum siap.
         logger.exception("PostgreSQL full-text retrieval failed; using vector results only")
         keyword_documents = []
-    return _fuse_rankings(vector_documents, keyword_documents, limit)
+    return _fuse_rankings(vector_documents, keyword_documents, query, limit)
