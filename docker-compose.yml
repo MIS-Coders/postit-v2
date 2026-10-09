@@ -34,11 +34,14 @@ services:
     volumes:
       # PDF SOP untuk api/scripts/batch_embed.py (script membaca ./uploads relatif /app)
       - ./storage/sop:/app/uploads:ro
+      # Golden dataset AI Quality Lab dibaca API untuk approved-question routing.
+      - ./storage:/storage:ro
     environment:
       - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-postit}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postit}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - VOYAGE_API_KEY=${VOYAGE_API_KEY}
       - APP_SECRET_TOKEN=${APP_SECRET_TOKEN}
+      - CHATBOT_EVALUATION_FILE=${CHATBOT_EVALUATION_FILE:-/storage/chatbot-evaluation.json}
     depends_on:
       db:
         condition: service_healthy

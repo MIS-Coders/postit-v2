@@ -19,6 +19,15 @@ export const evaluationStatuses = ['draft', 'ready', 'passed', 'failed'] as cons
 export type EvaluationStatus = (typeof evaluationStatuses)[number];
 export type EvaluationDocumentType = 'READ' | 'FORM' | '';
 
+export interface EvaluationSource {
+	source: string;
+	documentName: string;
+	documentNumber: string;
+	sopDocumentId: string;
+	type: EvaluationDocumentType;
+	pages: number[];
+}
+
 export interface ChatbotEvaluationCase {
 	id: string;
 	category: string;
@@ -30,6 +39,10 @@ export interface ChatbotEvaluationCase {
 	expectedAnswer: string;
 	notes: string;
 	status: EvaluationStatus;
+	useForRouting: boolean;
+	actualAnswer: string;
+	actualSources: EvaluationSource[];
+	lastRunAt: string;
 	updatedAt: string;
 }
 
@@ -92,6 +105,10 @@ function initialCases(): ChatbotEvaluationCase[] {
 				: '',
 		notes: index === 0 ? 'Contoh kasus yang sudah diverifikasi.' : '',
 		status: index === 0 ? 'ready' : 'draft',
+		useForRouting: false,
+		actualAnswer: '',
+		actualSources: [],
+		lastRunAt: '',
 		updatedAt: now
 	}));
 }
@@ -116,7 +133,24 @@ export async function listEvaluationCases(): Promise<ChatbotEvaluationCase[]> {
 		await writeCases(cases);
 		return cases;
 	}
-	return JSON.parse(await readFile(target, 'utf-8')) as ChatbotEvaluationCase[];
+	const stored = JSON.parse(await readFile(target, 'utf-8')) as Partial<ChatbotEvaluationCase>[];
+	return stored.map((item) => ({
+		id: item.id ?? randomUUID(),
+		category: item.category ?? 'Umum',
+		question: item.question ?? '',
+		expectedDocumentType: item.expectedDocumentType ?? '',
+		expectedDocument: item.expectedDocument ?? '',
+		expectedDocumentNumber: item.expectedDocumentNumber ?? '',
+		expectedPage: item.expectedPage ?? '',
+		expectedAnswer: item.expectedAnswer ?? '',
+		notes: item.notes ?? '',
+		status: item.status ?? 'draft',
+		useForRouting: item.useForRouting ?? false,
+		actualAnswer: item.actualAnswer ?? '',
+		actualSources: item.actualSources ?? [],
+		lastRunAt: item.lastRunAt ?? '',
+		updatedAt: item.updatedAt ?? new Date().toISOString()
+	}));
 }
 
 export async function saveEvaluationCases(cases: ChatbotEvaluationCase[]) {
@@ -135,6 +169,10 @@ export function newEvaluationCase(category: string, question: string): ChatbotEv
 		expectedAnswer: '',
 		notes: '',
 		status: 'draft',
+		useForRouting: false,
+		actualAnswer: '',
+		actualSources: [],
+		lastRunAt: '',
 		updatedAt: new Date().toISOString()
 	};
 }

@@ -47,6 +47,7 @@
 	const readyCount = $derived(data.cases.filter((item) => item.status === 'ready').length);
 	const passedCount = $derived(data.cases.filter((item) => item.status === 'passed').length);
 	const failedCount = $derived(data.cases.filter((item) => item.status === 'failed').length);
+	const routingCount = $derived(data.cases.filter((item) => item.useForRouting).length);
 	const field =
 		'mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary';
 </script>
@@ -105,7 +106,7 @@
 			</p>
 		{/if}
 
-		<div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+		<div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
 			<div class="rounded-2xl border bg-card p-4">
 				<p class="text-xs font-medium text-muted-foreground">Total pertanyaan</p>
 				<p class="mt-1 text-2xl font-semibold">{data.cases.length}</p>
@@ -121,6 +122,10 @@
 			<div class="rounded-2xl border bg-card p-4">
 				<p class="text-xs font-medium text-muted-foreground">Perlu perbaikan</p>
 				<p class="mt-1 text-2xl font-semibold text-destructive">{failedCount}</p>
+			</div>
+			<div class="rounded-2xl border bg-card p-4">
+				<p class="text-xs font-medium text-muted-foreground">Routing aktif</p>
+				<p class="mt-1 text-2xl font-semibold text-violet-600">{routingCount}</p>
 			</div>
 		</div>
 
@@ -284,19 +289,75 @@
 										>{testCase.notes}</textarea
 									></label
 								>
+								<label
+									class="flex items-start gap-3 rounded-xl border bg-background p-3 md:col-span-2 xl:col-span-4"
+								>
+									<input
+										type="checkbox"
+										name="useForRouting"
+										checked={testCase.useForRouting}
+										class="mt-0.5 size-4 rounded border-muted-foreground/40 accent-primary"
+									/>
+									<span>
+										<span class="block text-sm font-semibold">Gunakan untuk memperkuat chatbot</span
+										>
+										<span class="mt-0.5 block text-xs text-muted-foreground">
+											Hanya dapat diaktifkan setelah hasil uji Lulus dan jawaban acuannya lengkap.
+										</span>
+									</span>
+								</label>
 								<div class="flex flex-wrap items-center gap-2 md:col-span-2 xl:col-span-4">
 									<button
 										class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
 										type="submit"><RiCheckboxCircleLine class="size-4" />Simpan perubahan</button
 									>
+									<button
+										class="inline-flex items-center gap-1.5 rounded-lg border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+										type="submit"
+										formaction="?/run"
+										disabled={!testCase.expectedDocument && !testCase.expectedDocumentNumber}
+										><RiSparkling2Line class="size-4" />Uji sekarang</button
+									>
 									<span class="text-xs text-muted-foreground"
-										>Terakhir diperbarui {new Intl.DateTimeFormat('id-ID', {
-											dateStyle: 'medium',
-											timeStyle: 'short'
-										}).format(new Date(testCase.updatedAt))}</span
+										>Uji memakai dan menyimpan isi form saat ini · Terakhir diperbarui {new Intl.DateTimeFormat(
+											'id-ID',
+											{
+												dateStyle: 'medium',
+												timeStyle: 'short'
+											}
+										).format(new Date(testCase.updatedAt))}</span
 									>
 								</div>
 							</form>
+							{#if testCase.lastRunAt}
+								<div class="mt-4 rounded-xl border bg-background p-4">
+									<div class="flex flex-wrap items-center justify-between gap-2">
+										<p class="text-sm font-semibold">Hasil uji terakhir</p>
+										<p class="text-xs text-muted-foreground">
+											{new Intl.DateTimeFormat('id-ID', {
+												dateStyle: 'medium',
+												timeStyle: 'short'
+											}).format(new Date(testCase.lastRunAt))}
+										</p>
+									</div>
+									<p class="mt-3 text-sm leading-6 whitespace-pre-wrap">
+										{testCase.actualAnswer || 'Chatbot tidak mengembalikan jawaban.'}
+									</p>
+									<div class="mt-3 flex flex-wrap gap-2">
+										{#each testCase.actualSources as source}
+											<span class="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+												{source.documentName ||
+													source.source ||
+													'Sumber tanpa nama'}{source.documentNumber
+													? ` · ${source.documentNumber}`
+													: ''}
+											</span>
+										{:else}
+											<span class="text-xs text-destructive">Tidak ada sumber yang ditemukan.</span>
+										{/each}
+									</div>
+								</div>
+							{/if}
 							<form method="POST" action="?/delete" class="mt-3 flex justify-end">
 								<input type="hidden" name="id" value={testCase.id} />
 								<button class="text-xs font-medium text-destructive hover:underline" type="submit"

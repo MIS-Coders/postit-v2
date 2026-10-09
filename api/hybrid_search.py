@@ -1,6 +1,9 @@
+import json
 import logging
 import re
 from collections import defaultdict
+from difflib import SequenceMatcher
+from pathlib import Path
 
 from langchain_core.documents import Document
 from sqlalchemy import text
@@ -69,6 +72,15 @@ QUERY_EXPANSIONS = {
         "Leave/Absent Form",
         "Permohonan Cuti Izin Absen",
     ),
+    "sembuh": (
+        "sakit",
+        "sick",
+        "leave",
+        "absent",
+        "cuti",
+        "absen",
+        "Leave/Absent Form",
+    ),
 }
 
 
@@ -106,6 +118,104 @@ def _keyword_weight(query: str) -> float:
     """Keyword-only hits should dominate only for explicit document codes."""
     looks_like_code = bool(re.search(r"\b[a-z]{2,}(?:[-/][a-z0-9]+)+\b", query.lower()))
     return 1.15 if looks_like_code else 0.35
+
+
+def _normalized_text(value: str) -> str:
+    return " ".join(re.findall(r"[a-z0-9]+", value.lower()))
+
+
+def _meaningful_tokens(value: str) -> set[str]:
+    expanded_value = " ".join([value, *_query_expansions(value)])
+    return {
+        token
+        for token in re.findall(r"[a-z0-9]+", expanded_value.lower())
+        if token not in STOPWORDS and (len(token) >= 3 or token.isdigit())
+    }
+
+
+def _routing_similarity(query: str, example: str) -> float:
+    query_tokens = _meaningful_tokens(query)
+    example_tokens = _meaningful_tokens(example)
+    overlap = 0.0
+    if query_tokens and example_tokens:
+        overlap = len(query_tokens & example_tokens) / min(len(query_tokens), len(example_tokens))
+    sequence = SequenceMatcher(None, _normalized_text(query), _normalized_text(example)).ratio()
+    return max(overlap, sequence)
+
+
+def _approved_route_documents(engine, query, document_type, evaluation_file, limit=3):
+    if not evaluation_file or not Path(evaluation_file).is_file():
+        return []
+    try:
+        cases = json.loads(Path(evaluation_file).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, TypeError):
+        logger.exception("Unable to read approved chatbot routing rules")
+        return []
+
+    candidates = []
+    for case in cases:
+        if case.get("status") != "passed" or not case.get("useForRouting"):
+            continue
+        expected_type = case.get("expectedDocumentType") or None
+        if document_type and expected_type and expected_type != document_type:
+            continue
+        if not case.get("expectedDocumentNumber") and not case.get("expectedDocument"):
+            continue
+        score = _routing_similarity(query, case.get("question", ""))
+        if score >= 0.55:
+            candidates.append((score, case))
+    if not candidates:
+        return []
+
+    _, route = max(candidates, key=lambda candidate: candidate[0])
+    filters = ["c.name = :collection_name"]
+    parameters = {"collection_name": COLLECTION_NAME, "limit": max(1, limit - 1)}
+    if route.get("expectedDocumentNumber"):
+        filters.append("e.cmetadata->>'document_number' = :document_number")
+        parameters["document_number"] = route["expectedDocumentNumber"]
+    else:
+        filters.append("e.cmetadata->>'document_name' = :document_name")
+        parameters["document_name"] = route["expectedDocument"]
+    if route.get("expectedDocumentType") == "FORM":
+        filters.append("e.cmetadata->>'type_doc' = 'FORM'")
+    elif route.get("expectedDocumentType") == "READ":
+        filters.append("COALESCE(e.cmetadata->>'type_doc', 'READ') = 'READ'")
+
+    statement = text(
+        f"""
+        SELECT e.document, e.cmetadata
+        FROM langchain_pg_embedding e
+        JOIN langchain_pg_collection c ON c.uuid = e.collection_id
+        WHERE {' AND '.join(filters)}
+        ORDER BY COALESCE((e.cmetadata->>'chunk')::integer, 0)
+        LIMIT :limit
+        """
+    )
+    with engine.connect() as connection:
+        documents = [
+            Document(page_content=row.document, metadata=row.cmetadata or {})
+            for row in connection.execute(statement, parameters)
+        ]
+    if not documents:
+        return []
+
+    expected_answer = (route.get("expectedAnswer") or "").strip()
+    if expected_answer:
+        metadata = dict(documents[0].metadata)
+        pages = [int(page) for page in re.findall(r"\d+", route.get("expectedPage") or "")]
+        if pages:
+            metadata["pages"] = pages
+        metadata["chunk"] = "approved-route"
+        metadata["approved_route"] = True
+        documents.insert(
+            0,
+            Document(
+                page_content=f"Jawaban acuan terverifikasi tim MIS:\n{expected_answer}",
+                metadata=metadata,
+            ),
+        )
+    logger.info("Applied approved chatbot route for document %s", route.get("expectedDocumentNumber"))
+    return documents[:limit]
 
 
 def _document_key(document: Document) -> tuple:
@@ -175,7 +285,15 @@ def _fuse_rankings(vector_documents, keyword_documents, query, limit):
     return [documents[key] for key in ordered_keys[:limit]]
 
 
-def hybrid_search(vector_store, engine, query, department=None, document_type=None, limit=5):
+def hybrid_search(
+    vector_store,
+    engine,
+    query,
+    department=None,
+    document_type=None,
+    evaluation_file=None,
+    limit=5,
+):
     """Combine semantic retrieval and PostgreSQL full-text retrieval with RRF."""
     candidate_limit = 30 if document_type == "READ" else 20
     metadata_filters = []
@@ -215,4 +333,24 @@ def hybrid_search(vector_store, engine, query, department=None, document_type=No
         # Vector retrieval tetap melayani chat jika index/migration keyword belum siap.
         logger.exception("PostgreSQL full-text retrieval failed; using vector results only")
         keyword_documents = []
-    return _fuse_rankings(vector_documents, keyword_documents, query, limit)
+    fused_documents = _fuse_rankings(vector_documents, keyword_documents, query, limit)
+    try:
+        routed_documents = _approved_route_documents(
+            engine,
+            query=query,
+            document_type=document_type,
+            evaluation_file=evaluation_file,
+        )
+    except SQLAlchemyError:
+        logger.exception("Approved chatbot route failed; using hybrid results only")
+        routed_documents = []
+
+    combined_documents = []
+    seen = set()
+    for document in [*routed_documents, *fused_documents]:
+        key = _document_key(document)
+        if key in seen:
+            continue
+        seen.add(key)
+        combined_documents.append(document)
+    return combined_documents[:limit]

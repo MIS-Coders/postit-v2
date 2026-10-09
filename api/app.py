@@ -61,6 +61,7 @@ vector_store = PGVector(
 job_engine = create_engine(connection_string)
 embed_lock = Lock()
 upload_directory = Path(os.getenv("SOP_UPLOAD_DIR", "/app/uploads"))
+evaluation_file = Path(os.getenv("CHATBOT_EVALUATION_FILE", "/storage/chatbot-evaluation.json"))
 
 # 3. LLM and prompt setup
 llm = ChatGoogleGenerativeAI(model='gemini-3.1-flash-lite', google_api_key=api_key, temperature=0.2)
@@ -218,6 +219,8 @@ def collect_sources(docs):
                 "department": doc.metadata.get("department"),
                 "sop_doc_id": doc.metadata.get("sop_doc_id"),
                 "type_doc": doc.metadata.get("type_doc", "READ"),
+                "document_name": doc.metadata.get("document_name"),
+                "document_number": doc.metadata.get("document_number"),
                 "pages": [],
             },
         )
@@ -369,6 +372,8 @@ def chat():
         query=user_query,
         department=db_department_name,
         document_type=document_type,
+        # Pengujian harus mengukur retrieval asli, bukan dibantu routing yang sedang diuji.
+        evaluation_file=None if data.get("evaluation") is True else evaluation_file,
         limit=5,
     )
 
