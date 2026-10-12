@@ -5,6 +5,8 @@
 	import RiSearchLine from 'remixicon-svelte/icons/search-line';
 	import RiSparkling2Line from 'remixicon-svelte/icons/sparkling-2-line';
 
+	import ExpectedDocumentFields from '$lib/components/chat/expected-document-fields.svelte';
+
 	let { data, form } = $props();
 	let search = $state('');
 	let category = $state('');
@@ -233,15 +235,6 @@
 									></label
 								>
 								<label class="text-sm font-medium"
-									>Jenis dokumen<select
-										class={field}
-										name="expectedDocumentType"
-										value={testCase.expectedDocumentType}
-										><option value="">Belum ditentukan</option><option value="READ">SOP/IK</option
-										><option value="FORM">Formulir</option></select
-									></label
-								>
-								<label class="text-sm font-medium"
 									>Status<select class={field} name="status" value={testCase.status}
 										>{#each data.statuses as item}<option value={item}>{statusLabels[item]}</option
 											>{/each}</select
@@ -255,22 +248,13 @@
 										placeholder="Contoh: 1 atau 2–3"
 									/></label
 								>
-								<label class="text-sm font-medium md:col-span-2"
-									>Dokumen yang benar<input
-										class={field}
-										name="expectedDocument"
-										value={testCase.expectedDocument}
-										placeholder="Nama dokumen resmi"
-									/></label
-								>
-								<label class="text-sm font-medium md:col-span-2"
-									>Nomor dokumen<input
-										class={field}
-										name="expectedDocumentNumber"
-										value={testCase.expectedDocumentNumber}
-										placeholder="Contoh: FPI-HD/PA-03-02"
-									/></label
-								>
+								<ExpectedDocumentFields
+									documents={data.searchDocs}
+									type={testCase.expectedDocumentType}
+									name={testCase.expectedDocument}
+									number={testCase.expectedDocumentNumber}
+									{field}
+								/>
 								<label class="text-sm font-medium md:col-span-2 xl:col-span-4"
 									>Jawaban yang diharapkan<textarea
 										class={field}
