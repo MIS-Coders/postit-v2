@@ -1,6 +1,9 @@
 import { redirect, type Handle } from '@sveltejs/kit';
+import { eq } from 'drizzle-orm';
 import { building } from '$app/environment';
 import { auth } from '$lib/server/auth';
+import { db } from '$lib/server/db';
+import { user } from '$lib/server/db/schema';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 
 const handleBetterAuth: Handle = async ({ event, resolve }) => {
@@ -12,6 +15,10 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	if (session) {
 		event.locals.session = session.session;
 		event.locals.user = session.user;
+		const [row] = await db.select({ legacyId: user.legacyId }).from(user).where(eq(user.id, session.user.id)).limit(1);
+		event.locals.legacyUserId = row?.legacyId ?? null;
+	} else {
+		event.locals.legacyUserId = null;
 	}
 
 	if (!session && !isPublicPath) {

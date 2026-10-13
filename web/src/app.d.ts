@@ -4,7 +4,7 @@ import type { User, Session } from 'better-auth';
 // for information about these interfaces
 declare global {
 	namespace App {
-		interface Locals { user?: User; session?: Session }
+		interface Locals { user?: User; session?: Session; legacyUserId?: number | null }
 
 		// interface Error {}
 		// interface PageData {}
