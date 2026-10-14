@@ -1,113 +1,150 @@
-import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index, integer } from "drizzle-orm/pg-core";
+import { relations, sql } from 'drizzle-orm';
+import {
+	pgTable,
+	text,
+	timestamp,
+	boolean,
+	index,
+	integer,
+	varchar,
+	uniqueIndex
+} from 'drizzle-orm/pg-core';
 
-export const user = pgTable("user", {
-  id: text("id").primaryKey(),
-  legacyId: integer("legacy_id").unique(),
-  name: text("name").notNull(),
-  username: text("username").unique(),
-  email: text("email").notNull().unique(),
-	role: text("role").notNull().default("user"),
+export const user = pgTable('user', {
+	id: text('id').primaryKey(),
+	legacyId: integer('legacy_id').unique(),
+	name: text('name').notNull(),
+	username: text('username').unique(),
+	email: text('email').notNull().unique(),
+	role: text('role').notNull().default('user'),
 	// Profil dari tabel `user` aplikasi PostIt lama.
-	nik: text("nik"),
-	nama: text("nama"),
-	idSbu: integer("id_sbu"),
-	idDepartement: integer("id_departement"),
-	idLevel: integer("id_level"),
-	jk: text("jk"),
-	levelSys: text("level_sys"),
-	foto: text("foto"),
-	remark: text("remark"),
-	inputByUserId: integer("input_by_userid"),
-	inputDate: timestamp("input_date"),
-	editByUserId: integer("edit_by_userid"),
-	editDate: timestamp("edit_date"),
-	voidByUserId: integer("void_by_userid"),
-	voidDate: timestamp("void_date"),
-	voidStatus: integer("void_status"),
-  emailVerified: boolean("email_verified").default(false).notNull(),
-  image: text("image"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
+	nik: text('nik'),
+	nama: text('nama'),
+	idSbu: integer('id_sbu'),
+	idDepartement: integer('id_departement'),
+	idLevel: integer('id_level'),
+	jk: text('jk'),
+	levelSys: text('level_sys'),
+	foto: text('foto'),
+	remark: text('remark'),
+	inputByUserId: integer('input_by_userid'),
+	inputDate: timestamp('input_date'),
+	editByUserId: integer('edit_by_userid'),
+	editDate: timestamp('edit_date'),
+	voidByUserId: integer('void_by_userid'),
+	voidDate: timestamp('void_date'),
+	voidStatus: integer('void_status'),
+	emailVerified: boolean('email_verified').default(false).notNull(),
+	image: text('image'),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at')
+		.defaultNow()
+		.$onUpdate(() => /* @__PURE__ */ new Date())
+		.notNull()
 });
 
+export const departement = pgTable(
+	'departement',
+	{
+		id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
+		namaDepartement: varchar('nama_departement', { length: 50 }).notNull(),
+		userIdHead: integer('userid_head').references(() => user.legacyId, {
+			onUpdate: 'cascade',
+			onDelete: 'set null'
+		}),
+		userIdSpi: integer('userid_spi').references(() => user.legacyId, {
+			onUpdate: 'cascade',
+			onDelete: 'set null'
+		}),
+		inputByUserId: integer('input_by_userid').notNull(),
+		inputDate: timestamp('input_date', { withTimezone: true }),
+		editByUserId: integer('edit_by_userid'),
+		editDate: timestamp('edit_date', { withTimezone: true }),
+		voidByUserId: integer('void_by_userid'),
+		voidDate: timestamp('void_date', { withTimezone: true }),
+		voidStatus: integer('void_status').default(0).notNull()
+	},
+	(table) => [
+		uniqueIndex('departement_nama_lower_unique').on(sql`lower(${table.namaDepartement})`),
+		index('departement_userid_head_idx').on(table.userIdHead),
+		index('departement_userid_spi_idx').on(table.userIdSpi)
+	]
+);
+
 export const session = pgTable(
-  "session",
-  {
-    id: text("id").primaryKey(),
-    expiresAt: timestamp("expires_at").notNull(),
-    token: text("token").notNull().unique(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-    ipAddress: text("ip_address"),
-    userAgent: text("user_agent"),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-  },
-  (table) => [index("session_userId_idx").on(table.userId)],
+	'session',
+	{
+		id: text('id').primaryKey(),
+		expiresAt: timestamp('expires_at').notNull(),
+		token: text('token').notNull().unique(),
+		createdAt: timestamp('created_at').defaultNow().notNull(),
+		updatedAt: timestamp('updated_at')
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+		ipAddress: text('ip_address'),
+		userAgent: text('user_agent'),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' })
+	},
+	(table) => [index('session_userId_idx').on(table.userId)]
 );
 
 export const account = pgTable(
-  "account",
-  {
-    id: text("id").primaryKey(),
-    accountId: text("account_id").notNull(),
-    providerId: text("provider_id").notNull(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    accessToken: text("access_token"),
-    refreshToken: text("refresh_token"),
-    idToken: text("id_token"),
-    accessTokenExpiresAt: timestamp("access_token_expires_at"),
-    refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
-    scope: text("scope"),
-    password: text("password"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (table) => [index("account_userId_idx").on(table.userId)],
+	'account',
+	{
+		id: text('id').primaryKey(),
+		accountId: text('account_id').notNull(),
+		providerId: text('provider_id').notNull(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		accessToken: text('access_token'),
+		refreshToken: text('refresh_token'),
+		idToken: text('id_token'),
+		accessTokenExpiresAt: timestamp('access_token_expires_at'),
+		refreshTokenExpiresAt: timestamp('refresh_token_expires_at'),
+		scope: text('scope'),
+		password: text('password'),
+		createdAt: timestamp('created_at').defaultNow().notNull(),
+		updatedAt: timestamp('updated_at')
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull()
+	},
+	(table) => [index('account_userId_idx').on(table.userId)]
 );
 
 export const verification = pgTable(
-  "verification",
-  {
-    id: text("id").primaryKey(),
-    identifier: text("identifier").notNull(),
-    value: text("value").notNull(),
-    expiresAt: timestamp("expires_at").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (table) => [index("verification_identifier_idx").on(table.identifier)],
+	'verification',
+	{
+		id: text('id').primaryKey(),
+		identifier: text('identifier').notNull(),
+		value: text('value').notNull(),
+		expiresAt: timestamp('expires_at').notNull(),
+		createdAt: timestamp('created_at').defaultNow().notNull(),
+		updatedAt: timestamp('updated_at')
+			.defaultNow()
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull()
+	},
+	(table) => [index('verification_identifier_idx').on(table.identifier)]
 );
 
 export const userRelations = relations(user, ({ many }) => ({
-  sessions: many(session),
-  accounts: many(account),
+	sessions: many(session),
+	accounts: many(account)
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
-  user: one(user, {
-    fields: [session.userId],
-    references: [user.id],
-  }),
+	user: one(user, {
+		fields: [session.userId],
+		references: [user.id]
+	})
 }));
 
 export const accountRelations = relations(account, ({ one }) => ({
-  user: one(user, {
-    fields: [account.userId],
-    references: [user.id],
-  }),
+	user: one(user, {
+		fields: [account.userId],
+		references: [user.id]
+	})
 }));
