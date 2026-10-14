@@ -19,19 +19,29 @@
 	interface Props {
 		user: { name: string; email: string } | null;
 		role: 'user' | 'ms' | 'admin' | 'superadmin' | null;
-		searchDocs: Array<{ id: number; type: 'READ' | 'FORM'; nama: string; nomor: string; departement: string }>;
+		searchDocs: Array<{
+			id: number;
+			type: 'READ' | 'FORM';
+			nama: string;
+			nomor: string;
+			departement: string;
+		}>;
 	}
 
 	let { user, role, searchDocs }: Props = $props();
 	let tabs = $derived([
 		{ href: '/chatbot', label: 'Chatbot' },
 		...documentTabs,
-		...(role === 'ms' || role === 'superadmin' ? [{ href: '/upload', label: 'Upload Dokumen' }] : []),
+		...(role === 'ms' || role === 'superadmin'
+			? [{ href: '/upload', label: 'Upload Dokumen' }]
+			: []),
 		...(role === 'ms' || role === 'superadmin'
 			? [{ href: '/development/chatbot-quality', label: 'AI Lab' }]
 			: []),
 		...(role === 'admin' || role === 'superadmin' ? [{ href: '/users', label: 'Data User' }] : []),
-		...(role === 'admin' || role === 'superadmin' ? [{ href: '/departement', label: 'Data Departement' }] : [])
+		...(role === 'admin' || role === 'superadmin'
+			? [{ href: '/department', label: 'Data Departement' }]
+			: [])
 	]);
 
 	let searchEl = $state<HTMLInputElement | null>(null);
@@ -40,7 +50,9 @@
 		const query = ui.search.trim().toLocaleLowerCase('id-ID');
 		if (!query) return [];
 		return searchDocs
-			.filter((doc) => `${doc.nama} ${doc.nomor} ${doc.departement}`.toLocaleLowerCase('id-ID').includes(query))
+			.filter((doc) =>
+				`${doc.nama} ${doc.nomor} ${doc.departement}`.toLocaleLowerCase('id-ID').includes(query)
+			)
 			.slice(0, 8);
 	});
 
@@ -79,7 +91,11 @@
 		<span class="hidden h-6 w-px bg-border md:block"></span>
 
 		<a href="/sop" class="flex items-center gap-2">
-			<img src="/brand/postit-mis-favicon.png" alt="PostIt" class="size-8 rounded-lg shadow-sm shadow-primary/30" />
+			<img
+				src="/brand/postit-mis-favicon.png"
+				alt="PostIt"
+				class="size-8 rounded-lg shadow-sm shadow-primary/30"
+			/>
 			<span class="text-lg font-semibold tracking-tight">PostIt</span>
 		</a>
 		<span
@@ -123,25 +139,52 @@
 					onkeydown={openFirstResult}
 				/>
 				<span class="hidden items-center gap-1 md:flex">
-					<kbd class="rounded border bg-muted px-1.5 font-mono text-[11px] text-muted-foreground">⌘</kbd>
-					<kbd class="rounded border bg-muted px-1.5 font-mono text-[11px] text-muted-foreground">K</kbd>
+					<kbd class="rounded border bg-muted px-1.5 font-mono text-[11px] text-muted-foreground"
+						>⌘</kbd
+					>
+					<kbd class="rounded border bg-muted px-1.5 font-mono text-[11px] text-muted-foreground"
+						>K</kbd
+					>
 				</span>
 			</label>
 
 			{#if searchOpen && ui.search.trim()}
-				<div class="absolute top-[calc(100%+0.5rem)] right-0 z-50 w-[min(26rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border bg-popover shadow-xl shadow-black/10">
-					<div class="border-b px-4 py-2.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Hasil pencarian</div>
+				<div
+					class="absolute top-[calc(100%+0.5rem)] right-0 z-50 w-[min(26rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border bg-popover shadow-xl shadow-black/10"
+				>
+					<div
+						class="border-b px-4 py-2.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+					>
+						Hasil pencarian
+					</div>
 					{#if matches.length}
 						<div class="max-h-96 overflow-y-auto p-1.5">
 							{#each matches as doc (doc.type + doc.id)}
-								<a href={resultHref(doc)} onclick={() => { ui.search = ''; searchOpen = false; }} class="flex items-start gap-3 rounded-xl px-3 py-2.5 transition hover:bg-muted">
-									<span class="mt-0.5 rounded-md bg-primary/10 px-2 py-1 text-[10px] font-bold tracking-wide text-primary">{doc.type === 'READ' ? 'SOP/IK' : 'FORM'}</span>
-									<span class="min-w-0"><span class="block truncate text-sm font-medium">{doc.nama}</span><span class="mt-0.5 block truncate text-xs text-muted-foreground">{doc.nomor} · {doc.departement}</span></span>
+								<a
+									href={resultHref(doc)}
+									onclick={() => {
+										ui.search = '';
+										searchOpen = false;
+									}}
+									class="flex items-start gap-3 rounded-xl px-3 py-2.5 transition hover:bg-muted"
+								>
+									<span
+										class="mt-0.5 rounded-md bg-primary/10 px-2 py-1 text-[10px] font-bold tracking-wide text-primary"
+										>{doc.type === 'READ' ? 'SOP/IK' : 'FORM'}</span
+									>
+									<span class="min-w-0"
+										><span class="block truncate text-sm font-medium">{doc.nama}</span><span
+											class="mt-0.5 block truncate text-xs text-muted-foreground"
+											>{doc.nomor} · {doc.departement}</span
+										></span
+									>
 								</a>
 							{/each}
 						</div>
 					{:else}
-						<p class="px-4 py-7 text-center text-sm text-muted-foreground">Tidak ada SOP atau formulir yang cocok.</p>
+						<p class="px-4 py-7 text-center text-sm text-muted-foreground">
+							Tidak ada SOP atau formulir yang cocok.
+						</p>
 					{/if}
 				</div>
 			{/if}
@@ -159,12 +202,21 @@
 				<span class="hidden truncate text-sm font-medium md:inline">{user.name}</span>
 			</a>
 			<form method="POST" action="/logout">
-				<button type="submit" class="flex size-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground" title="Keluar" aria-label="Keluar">
+				<button
+					type="submit"
+					class="flex size-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
+					title="Keluar"
+					aria-label="Keluar"
+				>
 					<RiLogoutBoxRLine class="size-4" />
 				</button>
 			</form>
 		{:else}
-			<a href="/login" class="hidden rounded-lg border px-3 py-1.5 text-sm font-medium transition hover:bg-muted md:block">Masuk</a>
+			<a
+				href="/login"
+				class="hidden rounded-lg border px-3 py-1.5 text-sm font-medium transition hover:bg-muted md:block"
+				>Masuk</a
+			>
 		{/if}
 
 		<span class="hidden h-6 w-px bg-border md:block"></span>
