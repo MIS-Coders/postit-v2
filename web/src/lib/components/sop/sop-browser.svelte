@@ -16,6 +16,7 @@
 	}
 
 	let { type, departements, docs }: Props = $props();
+	let sidebarOpen = $state(true);
 
 	const label = $derived(type === 'READ' ? 'SOP/IK' : 'SOP Formulir');
 
@@ -35,8 +36,26 @@
 <svelte:head><title>{doc ? `${doc.nama_dokumen} · ` : ''}{label} · PostIt</title></svelte:head>
 
 <!-- mobile: daftar dulu, dokumen full-screen setelah dipilih. md ke atas: berdampingan -->
-<div class={cn('min-h-0', doc ? 'hidden md:flex' : 'flex flex-1 md:flex-none')}>
-	<SopTree title={label} {departements} {docs} selectedId={doc?.id ?? null} search={ui.search} />
+<div
+	class={cn(
+		'min-h-0',
+		doc
+			? sidebarOpen
+				? 'hidden md:flex'
+				: 'hidden'
+			: sidebarOpen
+				? 'flex flex-1 md:flex-none'
+				: 'flex flex-1 md:hidden'
+	)}
+>
+	<SopTree
+		title={label}
+		{departements}
+		{docs}
+		selectedId={doc?.id ?? null}
+		search={ui.search}
+		onCollapse={() => (sidebarOpen = false)}
+	/>
 </div>
 <div class={cn('min-h-0 min-w-0 flex-1', doc ? 'flex' : 'hidden md:flex')}>
 	<SopViewer
@@ -46,5 +65,6 @@
 		{initialPage}
 		canAskAi={true}
 		canPrint={type === 'FORM'}
+		onOpenSidebar={sidebarOpen ? undefined : () => (sidebarOpen = true)}
 	/>
 </div>

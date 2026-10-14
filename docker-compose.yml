@@ -68,6 +68,8 @@ services:
       - SOP_STORAGE_DIR=${SOP_STORAGE_DIR}
       - HOST=0.0.0.0
       - PORT=5173
+      # Adapter Node defaults to 512K; allow the app's 25 MB PDF limit plus multipart overhead.
+      - BODY_SIZE_LIMIT=30M
       - APP_SECRET_TOKEN=${APP_SECRET_TOKEN} # Bearer token untuk web container -> api container (localhost:3018)
       - EMBED_API_URL=${EMBED_API_URL:-http://api:5000}
       # - ORIGIN=${ORIGIN:-https://postit.mahkotagroup.com}

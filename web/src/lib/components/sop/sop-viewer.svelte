@@ -8,6 +8,7 @@
 	import RiPrinterLine from 'remixicon-svelte/icons/printer-line';
 	import RiSkipLeftLine from 'remixicon-svelte/icons/skip-left-line';
 	import RiSkipRightLine from 'remixicon-svelte/icons/skip-right-line';
+	import RiSidebarUnfoldLine from 'remixicon-svelte/icons/sidebar-unfold-line';
 	import RiSparkling2Line from 'remixicon-svelte/icons/sparkling-2-line';
 
 	import { sopFileUrl, type Departement, type SopDoc } from '$lib/sop';
@@ -24,9 +25,18 @@
 		// Ditampilkan untuk dokumen yang tersedia di indeks RAG.
 		canAskAi: boolean;
 		canPrint: boolean;
+		onOpenSidebar?: () => void;
 	}
 
-	let { typeLabel, doc, departement, initialPage = 1, canAskAi, canPrint }: Props = $props();
+	let {
+		typeLabel,
+		doc,
+		departement,
+		initialPage = 1,
+		canAskAi,
+		canPrint,
+		onOpenSidebar
+	}: Props = $props();
 
 	let pageNo = $state(1);
 	let numPages = $state(0);
@@ -83,6 +93,17 @@
 <section class="flex min-h-0 min-w-0 flex-1 flex-col">
 	<!-- breadcrumb -->
 	<div class="flex items-center gap-3 px-4 pt-4 pb-2 md:gap-4 md:px-10 md:pt-6">
+		{#if onOpenSidebar}
+			<button
+				type="button"
+				onclick={onOpenSidebar}
+				class="hidden size-9 shrink-0 items-center justify-center rounded-xl border bg-background text-muted-foreground shadow-xs transition hover:text-foreground md:flex"
+				title="Buka daftar dokumen"
+				aria-label="Buka daftar dokumen"
+			>
+				<RiSidebarUnfoldLine class="size-4" />
+			</button>
+		{/if}
 		{#if doc}
 			<a
 				href="?"
@@ -93,13 +114,20 @@
 			</a>
 		{/if}
 		<nav class="flex min-w-0 flex-1 items-center gap-4 text-sm" aria-label="Breadcrumb">
-			<span class={cn('shrink-0 text-xl font-normal text-muted-foreground', doc && 'hidden md:inline')}>{typeLabel}</span>
+			<span
+				class={cn('shrink-0 text-xl font-normal text-muted-foreground', doc && 'hidden md:inline')}
+				>{typeLabel}</span
+			>
 			{#if departement}
-				<span class="hidden truncate text-foreground/80 lg:block">{departement.nama_departement}</span>
+				<span class="hidden truncate text-foreground/80 lg:block"
+					>{departement.nama_departement}</span
+				>
 			{/if}
 			{#if doc}
 				<span class="flex min-w-0 items-center gap-1.5 font-semibold">
-					<span class="size-0 shrink-0 border-y-[5px] border-l-[7px] border-y-transparent border-l-primary"></span>
+					<span
+						class="size-0 shrink-0 border-y-[5px] border-l-[7px] border-y-transparent border-l-primary"
+					></span>
 					<span class="truncate">{doc.nama_dokumen}</span>
 				</span>
 			{/if}
@@ -135,9 +163,18 @@
 				<div class="min-w-0">
 					<h1 class="text-xl font-semibold tracking-tight md:text-2xl">{doc.nama_dokumen}</h1>
 					<dl class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
-						<div class="flex gap-1.5"><dt>No.</dt><dd class="font-mono text-foreground/80">{doc.no_dokumen}</dd></div>
-						<div class="flex gap-1.5"><dt>Rev.</dt><dd class="font-mono text-foreground/80">{doc.no_rev}</dd></div>
-						<div class="flex gap-1.5"><dt>Berlaku</dt><dd class="text-foreground/80">{fmt(doc.tgl_berlaku)}</dd></div>
+						<div class="flex gap-1.5">
+							<dt>No.</dt>
+							<dd class="font-mono text-foreground/80">{doc.no_dokumen}</dd>
+						</div>
+						<div class="flex gap-1.5">
+							<dt>Rev.</dt>
+							<dd class="font-mono text-foreground/80">{doc.no_rev}</dd>
+						</div>
+						<div class="flex gap-1.5">
+							<dt>Berlaku</dt>
+							<dd class="text-foreground/80">{fmt(doc.tgl_berlaku)}</dd>
+						</div>
 					</dl>
 				</div>
 				{#if canAskAi}
@@ -171,9 +208,13 @@
 			<!-- SOP tetap lihat saja; formulir dapat dicetak. -->
 			<div class="mt-8 overflow-hidden rounded-2xl border bg-muted/40">
 				{#if doc.has_file}
-					<div class="flex items-center justify-center border-b bg-background/60 px-3 py-2 sm:justify-between md:justify-center lg:justify-between">
+					<div
+						class="flex items-center justify-center border-b bg-background/60 px-3 py-2 sm:justify-between md:justify-center lg:justify-between"
+					>
 						<div class="flex items-center gap-2 px-2">
-							<span class="text-xs font-medium whitespace-nowrap text-muted-foreground">PDF · {canPrint ? 'dapat dicetak' : 'lihat saja'}</span>
+							<span class="text-xs font-medium whitespace-nowrap text-muted-foreground"
+								>PDF · {canPrint ? 'dapat dicetak' : 'lihat saja'}</span
+							>
 							{#if canPrint}
 								<button
 									type="button"
@@ -186,23 +227,53 @@
 							{/if}
 						</div>
 						<div class="flex items-center gap-0.5">
-							<button type="button" class={navBtn} aria-label="Halaman pertama" disabled={pageNo <= 1} onclick={() => (pageNo = 1)}>
+							<button
+								type="button"
+								class={navBtn}
+								aria-label="Halaman pertama"
+								disabled={pageNo <= 1}
+								onclick={() => (pageNo = 1)}
+							>
 								<RiSkipLeftLine class="size-4" />
 							</button>
-							<button type="button" class={navBtn} aria-label="Halaman sebelumnya" disabled={pageNo <= 1} onclick={() => pageNo--}>
+							<button
+								type="button"
+								class={navBtn}
+								aria-label="Halaman sebelumnya"
+								disabled={pageNo <= 1}
+								onclick={() => pageNo--}
+							>
 								<RiArrowLeftSLine class="size-4" />
 							</button>
-							<span class="min-w-16 text-center text-sm tabular-nums">{pageNo} / {numPages || '…'}</span>
-							<button type="button" class={navBtn} aria-label="Halaman berikutnya" disabled={pageNo >= numPages} onclick={() => pageNo++}>
+							<span class="min-w-16 text-center text-sm tabular-nums"
+								>{pageNo} / {numPages || '…'}</span
+							>
+							<button
+								type="button"
+								class={navBtn}
+								aria-label="Halaman berikutnya"
+								disabled={pageNo >= numPages}
+								onclick={() => pageNo++}
+							>
 								<RiArrowRightSLine class="size-4" />
 							</button>
-							<button type="button" class={navBtn} aria-label="Halaman terakhir" disabled={pageNo >= numPages} onclick={() => (pageNo = numPages)}>
+							<button
+								type="button"
+								class={navBtn}
+								aria-label="Halaman terakhir"
+								disabled={pageNo >= numPages}
+								onclick={() => (pageNo = numPages)}
+							>
 								<RiSkipRightLine class="size-4" />
 							</button>
 						</div>
 					</div>
 
-					<div class="relative flex justify-center p-3 select-none md:p-6" oncontextmenu={blockContextMenu} role="presentation">
+					<div
+						class="relative flex justify-center p-3 select-none md:p-6"
+						oncontextmenu={blockContextMenu}
+						role="presentation"
+					>
 						<PdfCanvas src={sopFileUrl(doc.id)} {pageNo} bind:numPages class="max-w-3xl" />
 
 						{#if notice}

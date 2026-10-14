@@ -54,7 +54,7 @@
 				<dl class="mt-5 space-y-4 text-sm">
 					<div><dt class="text-muted-foreground">Role</dt><dd class="mt-1 inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold tracking-wide text-primary uppercase">{data.role}</dd></div>
 					{#if data.profile.nik}<div><dt class="text-muted-foreground">NIK</dt><dd class="mt-1 font-medium">{data.profile.nik}</dd></div>{/if}
-					<div><dt class="text-muted-foreground">Bergabung sejak</dt><dd class="mt-1 font-medium">{formattedDate(data.profile.createdAt)}</dd></div>
+					<div><dt class="text-muted-foreground">Bergabung sejak</dt><dd class="mt-1 font-medium">{data.profile.inputDate ? formattedDate(data.profile.inputDate) : '-'}</dd></div>
 				</dl>
 			</aside>
 		</div>

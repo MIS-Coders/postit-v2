@@ -26,7 +26,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			nik: user.nik,
 			nama: user.nama,
 			role: user.role,
-			createdAt: user.createdAt
+			inputDate: user.inputDate
 		})
 		.from(user)
 		.where(eq(user.id, locals.user.id))

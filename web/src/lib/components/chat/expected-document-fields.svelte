@@ -31,8 +31,10 @@
 	const uid = $props.id();
 
 	// Sama dengan normalisasi di action ?/run, supaya "cocok" di sini berarti cocok saat diuji.
-	const normalize = (value: string) =>
-		value
+	// Data master hasil impor bisa berisi nomor/nama null atau angka, jadi dipaksa ke string dulu.
+	const text = (value: unknown) => (value == null ? '' : String(value));
+	const normalize = (value: unknown) =>
+		text(value)
 			.toLocaleLowerCase('id-ID')
 			.replace(/[^a-z0-9]+/g, ' ')
 			.trim();
@@ -57,8 +59,8 @@
 		return {
 			type: saved.type,
 			id: doc ? String(doc.id) : '',
-			name: doc?.nama ?? saved.name,
-			number: doc?.nomor ?? saved.number
+			name: doc ? text(doc.nama) : saved.name,
+			number: doc ? text(doc.nomor) || saved.number : saved.number
 		};
 	});
 
@@ -75,8 +77,8 @@
 		const terms = normalize(search).split(' ').filter(Boolean);
 		return documents.filter((doc) => {
 			if (type && doc.type !== type) return false;
-			const text = normalize(`${doc.nama} ${doc.nomor}`);
-			return terms.every((term) => text.includes(term));
+			const haystack = normalize(`${text(doc.nama)} ${text(doc.nomor)}`);
+			return terms.every((term) => haystack.includes(term));
 		});
 	});
 
@@ -84,9 +86,9 @@
 		const doc = documents.find((item) => String(item.id) === id);
 		if (!doc) return;
 		type = doc.type;
-		name = doc.nama;
-		number = doc.nomor;
-		inputText = doc.nama;
+		name = text(doc.nama);
+		number = text(doc.nomor);
+		inputText = name;
 	}
 
 	function clear() {
@@ -165,7 +167,7 @@
 				{#each options.slice(0, MAX_OPTIONS) as doc (doc.id)}
 					<Combobox.Item
 						value={String(doc.id)}
-						label={doc.nama}
+						label={text(doc.nama)}
 						class="flex cursor-default items-start gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
 					>
 						{#snippet children({ selected })}

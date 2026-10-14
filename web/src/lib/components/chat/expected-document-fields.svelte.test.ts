@@ -111,4 +111,34 @@ describe('ExpectedDocumentFields', () => {
 		expect(hidden().value).toBe('');
 		expect(numberInput().value).toBe('');
 	});
+
+	it('tolerates master data with a missing or numeric document number', async () => {
+		const broken = [
+			{
+				id: 1,
+				type: 'READ' as const,
+				nama: 'Prosedur Cuti Karyawan',
+				nomor: null,
+				departement: 'HCM'
+			},
+			{ id: 2, type: 'FORM' as const, nama: 'Formulir Lembur', nomor: 12, departement: 'HCM' }
+		] as unknown as typeof documents;
+		render(ExpectedDocumentFields, {
+			documents: broken,
+			type: '',
+			name: 'Formulir Lembur',
+			number: '12',
+			field
+		});
+		const input = page.getByRole('combobox', { name: 'Dokumen yang benar' });
+		await expect.element(input).toHaveValue('Formulir Lembur');
+		expect(numberInput().value).toBe('12');
+
+		await page.getByRole('button', { name: 'Kosongkan dokumen' }).click();
+		await input.click();
+		await userEvent.keyboard('cuti');
+		await page.getByRole('option', { name: 'Prosedur Cuti Karyawan' }).click();
+		await expect.element(input).toHaveValue('Prosedur Cuti Karyawan');
+		expect(numberInput().value).toBe('');
+	});
 });
