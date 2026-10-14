@@ -34,7 +34,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
 
     // 4. Kembalikan stream ke Browser, ditutup dengan link ke dokumen sumbernya
-    const links = sourceLinksMarkdown(flaskResponse.headers.get('x-chat-sources'));
+    const links = await sourceLinksMarkdown(flaskResponse.headers.get('x-chat-sources'));
     const stream = links && flaskResponse.body
       ? flaskResponse.body.pipeThrough(
           new TransformStream<Uint8Array, Uint8Array>({

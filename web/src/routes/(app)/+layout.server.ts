@@ -3,8 +3,8 @@ import { getRole } from '$lib/server/roles';
 import { listSop } from '$lib/server/sop';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
-	const toSearchDocs = (type: 'READ' | 'FORM') => {
-		const { departements, docs } = listSop(type);
+	const toSearchDocs = async (type: 'READ' | 'FORM') => {
+		const { departements, docs } = await listSop(type);
 		return docs.map((doc) => ({
 			id: doc.id,
 			type: doc.type_doc,
@@ -17,6 +17,6 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	return {
 		user: locals.user ? { name: locals.user.name, email: locals.user.email } : null,
 		role: locals.user ? await getRole(locals.user.id) : null,
-		searchDocs: [...toSearchDocs('READ'), ...toSearchDocs('FORM')]
+		searchDocs: [...(await toSearchDocs('READ')), ...(await toSearchDocs('FORM'))]
 	};
 };

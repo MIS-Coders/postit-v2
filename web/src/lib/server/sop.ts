@@ -1,8 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { sql } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 
+import { db } from '$lib/server/db';
 import type { Departement, SopDoc, TypeDoc } from '$lib/sop';
 
 // Sementara data dibaca dari storage/sop-data.json (hasil scripts/sop_json_from_sql.py)
@@ -46,11 +48,33 @@ function toClient({ file, ...doc }: SopRow): SopDoc {
 	return { ...doc, has_file: !!full && existsSync(full) };
 }
 
+/** Ambil daftar departemen dari tabel `public.departement` bila database tersedia. */
+export async function listDepartmentsFromDb(): Promise<Departement[]> {
+	try {
+		const rows = await db.execute(sql`
+			SELECT
+				id AS id,
+				nama_departement AS nama_departement
+			FROM public.departement
+			ORDER BY id ASC
+		`);
+
+		return rows.map((row) => ({
+			id: Number(row.id),
+			nama_departement: String(row.nama_departement ?? '-')
+		}));
+	} catch {
+		const data = load();
+		return [...data.departement].sort((a, b) => a.id - b.id);
+	}
+}
+
 /** Departemen aktif (urut id) + dokumen aktif sesuai type_doc, untuk tree SOP. */
-export function listSop(type: TypeDoc): { departements: Departement[]; docs: SopDoc[] } {
+export async function listSop(type: TypeDoc): Promise<{ departements: Departement[]; docs: SopDoc[] }> {
 	const data = load();
+	const departements = await listDepartmentsFromDb().catch(() => [...data.departement].sort((a, b) => a.id - b.id));
 	return {
-		departements: [...data.departement].sort((a, b) => a.id - b.id),
+		departements,
 		docs: data.sopdoc.filter((d) => d.type_doc === type).map(toClient)
 	};
 }
@@ -88,7 +112,8 @@ function safePdfFilename(filename: string) {
 /** Simpan PDF dan metadata dokumen baru. Hanya dipanggil dari action admin. */
 export async function createSopDocument(input: CreateSopDocumentInput): Promise<SopDoc> {
 	const data = load();
-	if (!data.departement.some((department) => department.id === input.departementId)) {
+	const departments = await listDepartmentsFromDb();
+	if (!departments.some((department) => department.id === input.departementId)) {
 		throw new Error('Departemen tidak valid.');
 	}
 

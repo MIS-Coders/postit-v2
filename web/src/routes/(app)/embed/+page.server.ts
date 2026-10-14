@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 
 import { getEmbedJob, startEmbed } from '$lib/server/embed';
-import { createSopDocument, getSopFileName, listSop } from '$lib/server/sop';
+import { createSopDocument, getSopFileName, listDepartmentsFromDb, listSop } from '$lib/server/sop';
 import { requireRole } from '$lib/server/roles';
 import type { TypeDoc } from '$lib/sop';
 
@@ -11,7 +11,8 @@ const maxPdfSize = 25 * 1024 * 1024;
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const access = await requireRole(locals, ['ms', 'superadmin']);
-	const { departements, docs } = listSop('READ');
+	const departements = await listDepartmentsFromDb();
+	const { docs } = await listSop('READ');
 	const jobId = url.searchParams.get('job');
 	let job = null;
 
@@ -63,7 +64,7 @@ export const actions: Actions = {
 				filename: pdf.name,
 				pdf: new Uint8Array(await pdf.arrayBuffer())
 			});
-			const department = listSop(type).departements.find((item) => item.id === doc.departement_id);
+			const department = (await listSop(type)).departements.find((item) => item.id === doc.departement_id);
 			const filename = getSopFileName(doc.id);
 			if (!department || !filename) throw new Error('Metadata dokumen tidak dapat disimpan.');
 
@@ -84,7 +85,7 @@ export const actions: Actions = {
 	reembed: async ({ request, locals, url }) => {
 		await requireRole(locals, ['superadmin']);
 		const id = Number(textValue((await request.formData()).get('documentId')));
-		const { departements, docs } = listSop('READ');
+		const { departements, docs } = await listSop('READ');
 		const doc = docs.find((item) => item.id === id);
 		const department = doc && departements.find((item) => item.id === doc.departement_id);
 		const filename = getSopFileName(id);

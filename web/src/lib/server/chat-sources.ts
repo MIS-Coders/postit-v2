@@ -27,14 +27,14 @@ const normalize = (text: string) =>
  * Cari dokumen SOP untuk satu sumber. Embedding baru membawa sop_doc_id; embedding lama
  * (batch_embed.py) hanya punya path "Departemen/Nama Dokumen.pdf", jadi dicocokkan lewat nama.
  */
-function findDoc(source: ChatSource): MatchedDoc | null {
+async function findDoc(source: ChatSource): Promise<MatchedDoc | null> {
 	const preferredType: TypeDoc = source.type_doc === 'FORM' ? 'FORM' : 'READ';
 	const types: TypeDoc[] = [preferredType, preferredType === 'FORM' ? 'READ' : 'FORM'];
 
 	const id = Number(source.sop_doc_id);
 	if (id) {
 		for (const type of types) {
-			const doc = listSop(type).docs.find((candidate) => candidate.id === id);
+			const doc = (await listSop(type)).docs.find((candidate) => candidate.id === id);
 			if (doc) return { doc, type };
 		}
 		return null;
@@ -42,7 +42,7 @@ function findDoc(source: ChatSource): MatchedDoc | null {
 
 	const name = normalize(source.source.split('/').pop() ?? '');
 	for (const type of types) {
-		const { departements, docs } = listSop(type);
+		const { departements, docs } = await listSop(type);
 		let matches = docs.filter((doc) => normalize(doc.nama_dokumen) === name);
 		if (matches.length > 1) {
 			const department = normalize(source.department ?? '');
@@ -58,13 +58,13 @@ function findDoc(source: ChatSource): MatchedDoc | null {
 }
 
 /** Blok markdown berisi link ke dokumen sumber, atau '' kalau tidak ada yang bisa ditautkan. */
-export function sourceLinksMarkdown(header: string | null): string {
+export async function sourceLinksMarkdown(header: string | null): Promise<string> {
 	if (!header) return '';
 
 	const links: SourceLink[] = [];
 	try {
 		for (const source of JSON.parse(header) as ChatSource[]) {
-			const match = findDoc(source);
+			const match = await findDoc(source);
 			if (!match) continue;
 			const { doc, type } = match;
 
