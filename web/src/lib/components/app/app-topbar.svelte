@@ -30,7 +30,8 @@
 		...(role === 'ms' || role === 'superadmin'
 			? [{ href: '/development/chatbot-quality', label: 'AI Lab' }]
 			: []),
-		...(role === 'admin' || role === 'superadmin' ? [{ href: '/users', label: 'Data User' }] : [])
+		...(role === 'admin' || role === 'superadmin' ? [{ href: '/users', label: 'Data User' }] : []),
+		...(role === 'admin' || role === 'superadmin' ? [{ href: '/departement', label: 'Data Departement' }] : [])
 	]);
 
 	let searchEl = $state<HTMLInputElement | null>(null);

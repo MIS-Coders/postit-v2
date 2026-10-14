@@ -3,7 +3,6 @@ import hashlib
 import time
 
 import pymupdf4llm
-import voyageai
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
