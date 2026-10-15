@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { page } from '$app/state';
 	import RiArrowLeftLine from 'remixicon-svelte/icons/arrow-left-line';
 	import RiCustomerService2Line from 'remixicon-svelte/icons/customer-service-2-line';
 	import RiLogoutBoxRLine from 'remixicon-svelte/icons/logout-box-r-line';
@@ -7,18 +6,10 @@
 	import RiUser3Line from 'remixicon-svelte/icons/user-3-line';
 
 	import { ui } from '$lib/state/ui.svelte';
-	import { cn } from '$lib/utils';
-
 	import ThemeToggle from './theme-toggle.svelte';
-
-	const documentTabs = [
-		{ href: '/sop', label: 'SOP/IK' },
-		{ href: '/formulir', label: 'SOP Formulir' }
-	];
 
 	interface Props {
 		user: { name: string; email: string } | null;
-		role: 'user' | 'ms' | 'admin' | 'superadmin' | null;
 		searchDocs: Array<{
 			id: number;
 			type: 'READ' | 'FORM';
@@ -28,21 +19,7 @@
 		}>;
 	}
 
-	let { user, role, searchDocs }: Props = $props();
-	let tabs = $derived([
-		{ href: '/chatbot', label: 'Chatbot' },
-		...documentTabs,
-		...(role === 'ms' || role === 'superadmin'
-			? [{ href: '/upload', label: 'Upload Dokumen' }]
-			: []),
-		...(role === 'ms' || role === 'superadmin'
-			? [{ href: '/development/chatbot-quality', label: 'AI Lab' }]
-			: []),
-		...(role === 'admin' || role === 'superadmin' ? [{ href: '/users', label: 'Data User' }] : []),
-		...(role === 'admin' || role === 'superadmin'
-			? [{ href: '/department', label: 'Data Departement' }]
-			: [])
-	]);
+	let { user, searchDocs }: Props = $props();
 
 	let searchEl = $state<HTMLInputElement | null>(null);
 	let searchOpen = $state(false);
@@ -105,25 +82,7 @@
 		</span>
 	</div>
 
-	<nav class="mx-auto hidden items-center gap-1 lg:flex" aria-label="Jenis dokumen">
-		{#each tabs as tab (tab.href)}
-			{@const active = page.url.pathname.startsWith(tab.href)}
-			<a
-				href={tab.href}
-				aria-current={active ? 'page' : undefined}
-				class={cn(
-					'rounded-full px-4 py-1.5 text-sm font-medium transition',
-					active
-						? 'bg-primary text-primary-foreground shadow-sm shadow-primary/30'
-						: 'text-foreground/80 hover:text-foreground'
-				)}
-			>
-				{tab.label}
-			</a>
-		{/each}
-	</nav>
-
-	<div class="ml-auto flex items-center gap-2 lg:ml-0">
+	<div class="ml-auto flex items-center gap-2">
 		<div class="relative">
 			<label
 				class="flex h-9 w-44 items-center gap-2 rounded-full border bg-background px-3 text-sm shadow-xs transition focus-within:border-primary/40 focus-within:ring-3 focus-within:ring-primary/15 md:w-72"
