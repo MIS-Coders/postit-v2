@@ -29,11 +29,18 @@
 			{ label: 'SOP Formulir', icon: RiFileList3Line, href: '/formulir' },
 			{ label: 'Chatbot', icon: RiChat3Line, href: '/chatbot' }
 		],
+		...(role === 'superadmin'
+			? [
+					[
+						{ label: 'AI Lab', icon: RiFlaskLine, href: '/development/chatbot-quality' }
+					]
+				]
+			: []),
 		...(role === 'ms' || role === 'superadmin'
 			? [
 					[
 						{ label: 'Upload Dokumen', icon: RiFileUploadLine, href: '/upload' },
-						{ label: 'AI Lab', icon: RiFlaskLine, href: '/development/chatbot-quality' }
+						{ label: 'Data Departement', icon: RiBuilding2Line, href: '/department' }
 					]
 				]
 			: []),
@@ -41,7 +48,6 @@
 			? [
 					[
 						{ label: 'Data User', icon: RiTeamLine, href: '/users' },
-						{ label: 'Data Departement', icon: RiBuilding2Line, href: '/department' }
 					]
 				]
 			: [])
