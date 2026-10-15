@@ -14,7 +14,7 @@ function value(form: FormData, field: string) {
 }
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-	const access = await requireRole(locals, ['admin', 'superadmin']);
+	const access = await requireRole(locals, ['superadmin', 'ms']);
 	const search = url.searchParams.get('q')?.trim() ?? '';
 	const requestedPage = Number.parseInt(url.searchParams.get('page') ?? '1', 10);
 	const searchTerm = search ? `%${search.toLowerCase()}%` : undefined;
