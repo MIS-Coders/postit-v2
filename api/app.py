@@ -356,6 +356,7 @@ def chat():
             "Jangan pernah mengatakan 'dokumen yang Anda berikan', 'dokumen yang kamu berikan', atau memberi kesan bahwa pengguna mengunggah sumbernya.\n"
             "Gunakan hanya konteks basis pengetahuan di bawah untuk menjawab secara akurat.\n"
             "Jika informasi tidak ditemukan, katakan 'Saya belum menemukan informasi tersebut di basis pengetahuan internal.'\n"
+            "Jika pertanyaan meminta jumlah, total, atau durasi dan konteks memuat angka, tuliskan angkanya secara eksplisit. Jika nilainya berbeda menurut kondisi, sebutkan variasi nilainya dan kondisi penentunya.\n"
             "Berikan jawaban utama terlebih dahulu, lalu sebutkan nama sumber, departemen, dan nomor halaman secara singkat jika tersedia.\n\n"
             "Konteks Dokumen:\n{context}"
         )

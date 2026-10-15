@@ -90,6 +90,18 @@ def _query_expansions(query: str) -> list[str]:
     for term, aliases in QUERY_EXPANSIONS.items():
         if re.search(rf"\b{re.escape(term)}\b", normalized_query):
             expansions.extend(aliases)
+    if re.search(r"\b(?:cuti|leave)\b", normalized_query) and re.search(
+        r"\b(?:berapa|jumlah|total|jatah)\b", normalized_query
+    ):
+        expansions.extend(
+            (
+                "jumlah hak cuti",
+                "jatah cuti",
+                "hak cuti dalam setahun",
+                "daftar hak cuti karyawan",
+                "hari cuti",
+            )
+        )
     return expansions
 
 
@@ -218,6 +230,50 @@ def _approved_route_documents(engine, query, document_type, evaluation_file, lim
     return documents[:limit]
 
 
+def _leave_entitlement_documents(engine, query, document_type, limit=2):
+    """Return the leave-entitlement table for questions asking how many leave days apply."""
+    normalized_query = query.lower()
+    asks_leave_amount = re.search(r"\b(?:cuti|leave)\b", normalized_query) and re.search(
+        r"\b(?:berapa|jumlah|total|jatah)\b", normalized_query
+    )
+    if not asks_leave_amount or document_type == "FORM":
+        return []
+
+    statement = text(
+        """
+        WITH anchor AS (
+            SELECT e.cmetadata->>'source' AS source,
+                   (e.cmetadata->>'chunk')::integer AS chunk
+            FROM langchain_pg_embedding e
+            JOIN langchain_pg_collection c ON c.uuid = e.collection_id
+            WHERE c.name = :collection_name
+              AND COALESCE(e.cmetadata->>'type_doc', 'READ') = 'READ'
+              AND (e.cmetadata->>'chunk') ~ '^\\d+$'
+              AND lower(e.document) LIKE '%daftar hak cuti%'
+            ORDER BY (e.cmetadata->>'chunk')::integer
+            LIMIT 1
+        )
+        SELECT e.document, e.cmetadata
+        FROM langchain_pg_embedding e
+        JOIN langchain_pg_collection c ON c.uuid = e.collection_id
+        JOIN anchor a ON e.cmetadata->>'source' = a.source
+        WHERE c.name = :collection_name
+          AND (e.cmetadata->>'chunk') ~ '^\\d+$'
+          AND (e.cmetadata->>'chunk')::integer BETWEEN a.chunk AND a.chunk + 1
+        ORDER BY (e.cmetadata->>'chunk')::integer
+        LIMIT :limit
+        """
+    )
+    with engine.connect() as connection:
+        return [
+            Document(page_content=row.document, metadata=row.cmetadata or {})
+            for row in connection.execute(
+                statement,
+                {"collection_name": COLLECTION_NAME, "limit": limit},
+            )
+        ]
+
+
 def _document_key(document: Document) -> tuple:
     metadata = document.metadata
     return (
@@ -335,6 +391,15 @@ def hybrid_search(
         keyword_documents = []
     fused_documents = _fuse_rankings(vector_documents, keyword_documents, query, limit)
     try:
+        entitlement_documents = _leave_entitlement_documents(
+            engine,
+            query=query,
+            document_type=document_type,
+        )
+    except SQLAlchemyError:
+        logger.exception("Leave entitlement lookup failed; using hybrid results only")
+        entitlement_documents = []
+    try:
         routed_documents = _approved_route_documents(
             engine,
             query=query,
@@ -347,7 +412,7 @@ def hybrid_search(
 
     combined_documents = []
     seen = set()
-    for document in [*routed_documents, *fused_documents]:
+    for document in [*routed_documents, *entitlement_documents, *fused_documents]:
         key = _document_key(document)
         if key in seen:
             continue
