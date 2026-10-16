@@ -83,12 +83,12 @@
 		{/each}
 	{/each}
 
-	<button
+	<!-- <button
 		type="button"
 		title="Keluar"
 		aria-label="Keluar"
 		class={cn(base, 'mt-auto hover:border-destructive/30 hover:text-destructive')}
 	>
 		<RiLogoutBoxRLine class="size-5" />
-	</button>
+	</button> -->
 </nav>
