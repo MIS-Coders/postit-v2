@@ -36,7 +36,7 @@
 					]
 				]
 			: []),
-		...(role === 'ms' || role === 'superadmin'
+		...(role === 'ms' || role === 'superadmin' || role === "admin"
 			? [
 					[
 						{ label: 'Upload Dokumen', icon: RiFileUploadLine, href: '/upload' },
