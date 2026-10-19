@@ -36,10 +36,29 @@
 
 		<form method="POST" action="?/create" class="mt-6 rounded-2xl border bg-card p-5 md:p-6">
 			<h2 class="font-semibold">Tambah pengguna</h2>
-			<div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+			<div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+				<label class="text-sm font-medium">NIK<input class={field} name="nik" required /></label>
 				<label class="text-sm font-medium">Nama<input class={field} name="name" autocomplete="name" required /></label>
 				<label class="text-sm font-medium">Username<input class={field} name="username" autocomplete="username" required /></label>
 				<label class="text-sm font-medium">Email<input class={field} name="email" type="email" autocomplete="email" required /></label>
+				<label class="text-sm font-medium">Bisnis Unit
+					<select class={field} name="sbuId" required>
+						<option value="">Pilih Bisnis Unit</option>
+						{#each data.sbus as sbu}<option value={sbu.id}>{sbu.namaSbu}</option>{/each}
+					</select>
+				</label>
+				<label class="text-sm font-medium">Departement
+					<select class={field} name="departementId" required>
+						<option value="">Pilih departement</option>
+						{#each data.departments as department}<option value={department.id}>{department.namaDepartement}</option>{/each}
+					</select>
+				</label>
+				<label class="text-sm font-medium">Jabatan
+					<select class={field} name="levelId" required>
+						<option value="">Pilih jabatan</option>
+						{#each data.levels as level}<option value={level.id}>{level.namaLevel}</option>{/each}
+					</select>
+				</label>
 				<label class="text-sm font-medium">Password awal<input class={field} name="password" type="password" minlength="8" autocomplete="new-password" required /></label>
 				<label class="text-sm font-medium">Role
 					<select class={field} name="role" value="user">
@@ -69,10 +88,29 @@
 			<div class="divide-y">
 				{#each data.users as account (account.id)}
 					<div class="p-5 md:px-6">
-						<form method="POST" action="?/update" class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_10rem_auto] md:items-end">
+						<form method="POST" action="?/update" class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
 							<input type="hidden" name="userId" value={account.id} />
+							<label class="text-sm font-medium">NIK<input class={field} name="nik" value={account.nik} required/></label>
 							<label class="text-sm font-medium">Nama<input class={field} name="name" value={account.name} required /></label>
 							<label class="text-sm font-medium">Username<input class={field} name="username" value={account.username ?? ''} required /></label>
+							<label class="text-sm font-medium">SBU
+								<select class={field} name="sbuId" value={account.sbuId ?? ''} required>
+									<option value="">Pilih SBU</option>
+									{#each data.sbus as sbu}<option value={sbu.id}>{sbu.namaSbu}</option>{/each}
+								</select>
+							</label>
+							<label class="text-sm font-medium">Departement
+								<select class={field} name="departementId" value={account.departmentId ?? ''} required>
+									<option value="">Pilih departement</option>
+									{#each data.departments as department}<option value={department.id}>{department.namaDepartement}</option>{/each}
+								</select>
+							</label>
+							<label class="text-sm font-medium">Jabatan
+								<select class={field} name="levelId" value={account.levelId ?? ''} required>
+									<option value="">Pilih jabatan</option>
+									{#each data.levels as level}<option value={level.id}>{level.namaLevel}</option>{/each}
+								</select>
+							</label>
 							<label class="text-sm font-medium">Email<input class={`${field} text-muted-foreground`} value={account.email} disabled /></label>
 							<label class="text-sm font-medium">Role
 								{#if account.id === data.userId}

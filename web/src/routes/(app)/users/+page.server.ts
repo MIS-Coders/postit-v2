@@ -4,9 +4,10 @@ import { and, count, desc, eq, ilike, ne, or } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 
 import { db } from '$lib/server/db';
-import { account, user } from '$lib/server/db/schema';
+import { account, user, sbu, departement, level } from '$lib/server/db/schema';
 import { requireRole, roles, type Role } from '$lib/server/roles';
 
+import { parseIdInput } from './user-ids';
 import type { Actions, PageServerLoad } from './$types';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -44,16 +45,43 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const totalPages = Math.max(1, Math.ceil(total / pageSize));
 	const page = Math.min(Math.max(Number.isFinite(requestedPage) ? requestedPage : 1, 1), totalPages);
 	const users = await db
-		.select({ id: user.id, name: user.name, username: user.username, email: user.email, role: user.role, createdAt: user.createdAt })
+		.select({
+			id: user.id,
+			nik: user.nik,
+			name: user.name,
+			sbuId: user.idSbu,
+			sbu: sbu.namaSbu,
+			departmentId: user.idDepartement,
+			department: departement.namaDepartement,
+			levelId: user.idLevel,
+			level: level.namaLevel,
+			username: user.username,
+			email: user.email,
+			role: user.role,
+			createdAt: user.createdAt
+		})
 		.from(user)
+		.leftJoin(sbu, eq(user.idSbu, sbu.id))
+		.leftJoin(departement, eq(user.idDepartement, departement.id))
+		.leftJoin(level, eq(user.idLevel, level.id))
 		.where(filter)
 		.orderBy(desc(user.createdAt))
 		.limit(pageSize)
 		.offset((page - 1) * pageSize);
 
+	const sbus = await db.select({ id: sbu.id, namaSbu: sbu.namaSbu }).from(sbu).orderBy(sbu.namaSbu);
+	const departments = await db
+		.select({ id: departement.id, namaDepartement: departement.namaDepartement })
+		.from(departement)
+		.orderBy(departement.namaDepartement);
+	const levels = await db.select({ id: level.id, namaLevel: level.namaLevel }).from(level).orderBy(level.namaLevel);
+
 	return {
 		...access,
 		users,
+		sbus,
+		departments,
+		levels,
 		search,
 		roleFilter,
 		allRoles: roles,
@@ -66,14 +94,18 @@ export const actions: Actions = {
 	create: async ({ request, locals, url }) => {
 		const access = await requireRole(locals, ['admin', 'superadmin']);
 		const form = await request.formData();
+		const nik = value(form, 'nik');
 		const name = value(form, 'name');
+		const sbuId = parseIdInput(value(form, 'sbuId'));
+		const departementId = parseIdInput(value(form, 'departementId'));
+		const levelId = parseIdInput(value(form, 'levelId'));
 		const username = value(form, 'username').toLowerCase();
 		const email = value(form, 'email').toLowerCase();
 		const password = value(form, 'password');
 		const role = value(form, 'role');
 
-		if (!name || !usernamePattern.test(username) || !emailPattern.test(email) || password.length < 8 || !validRole(role) || !canAssignRole(access.role, role)) {
-			return fail(400, { error: 'Isi nama, username valid, email valid, password minimal 8 karakter, dan role dengan benar.' });
+		if (!nik || !name || sbuId === null || departementId === null || levelId === null || !usernamePattern.test(username) || !emailPattern.test(email) || password.length < 8 || !validRole(role) || !canAssignRole(access.role, role)) {
+			return fail(400, { error: 'Isi nik, nama, sbu, departement, level, username valid, email valid, password minimal 8 karakter, dan role dengan benar.' });
 		}
 
 		const [existing] = await db.select({ id: user.id }).from(user).where(eq(user.email, email)).limit(1);
@@ -84,7 +116,7 @@ export const actions: Actions = {
 		const userId = randomUUID();
 		const passwordHash = await hashPassword(password);
 		await db.transaction(async (tx) => {
-			await tx.insert(user).values({ id: userId, name, username, email, role });
+			await tx.insert(user).values({ id: userId, nik, name, idSbu: sbuId, idDepartement: departementId, idLevel: levelId, username, email, role , inputByUserId: locals.legacyUserId ?? 0, inputDate: new Date(), voidStatus: 0, createdAt: new Date() });
 			await tx.insert(account).values({
 				id: randomUUID(),
 				accountId: userId,
@@ -101,11 +133,15 @@ export const actions: Actions = {
 		const access = await requireRole(locals, ['admin', 'superadmin']);
 		const form = await request.formData();
 		const userId = value(form, 'userId');
+		const nik = value(form, 'nik');
 		const name = value(form, 'name');
+		const sbuId = parseIdInput(value(form, 'sbuId'));
+		const departementId = parseIdInput(value(form, 'departementId'));
+		const levelId = parseIdInput(value(form, 'levelId'));
 		const username = value(form, 'username').toLowerCase();
 		const role = value(form, 'role');
 
-		if (!userId || !name || !usernamePattern.test(username) || !validRole(role) || !canAssignRole(access.role, role)) return fail(400, { error: 'Data pengguna tidak valid.' });
+		if (!userId || !nik || !name || sbuId === null || departementId === null || levelId === null || !usernamePattern.test(username) || !validRole(role) || !canAssignRole(access.role, role)) return fail(400, { error: 'Data pengguna tidak valid.' });
 		if (userId === access.userId && role !== access.role) {
 			return fail(400, { error: 'Role akun sendiri tidak dapat diubah dari halaman ini.' });
 		}
@@ -120,7 +156,7 @@ export const actions: Actions = {
 			.limit(1);
 		if (existingUsername && existingUsername.id !== userId) return fail(409, { error: 'Username tersebut sudah digunakan.' });
 
-		await db.update(user).set({ name, username, role, updatedAt: new Date() }).where(eq(user.id, userId));
+		await db.update(user).set({ nik, name, idSbu: sbuId, idDepartement: departementId, idLevel: levelId, username, role, updatedAt: new Date(), editByUserId: locals.legacyUserId ?? 0, editDate: new Date() }).where(eq(user.id, userId));
 		redirect(303, `${url.pathname}${url.search}`);
 	},
 
