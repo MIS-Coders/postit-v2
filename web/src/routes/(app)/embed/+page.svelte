@@ -24,6 +24,24 @@
 		filteredDocs.slice((legacyPage - 1) * legacyPageSize, legacyPage * legacyPageSize)
 	);
 
+	let logFilter = $state('all');
+	let logSearch = $state('');
+	let filteredLogs = $derived(
+		data.logs.filter((log) => {
+			const matchesAction =
+				logFilter === 'all' || (logFilter === 'pdf' ? log.pdfReplaced : log.action === logFilter);
+			const states = [log.before, log.after].filter((s) => s !== null);
+			const text = [
+				...states.flatMap((s) => [s.nama_dokumen, s.no_dokumen]),
+				log.actor.name,
+				log.actor.role
+			]
+				.join(' ')
+				.toLowerCase();
+			return matchesAction && text.includes(logSearch.trim().toLowerCase());
+		})
+	);
+
 	$effect(() => {
 		job = data.job;
 		if (form && 'jobId' in form && form.jobId)
@@ -369,8 +387,25 @@
 			<p class="mt-1 text-sm text-muted-foreground">
 				Riwayat upload, edit, dan hapus dokumen. Waktu ditampilkan dalam WIB.
 			</p>
-			<div class="mt-4 max-h-96 divide-y overflow-y-auto">
-				{#each data.logs as log (log.id)}
+			<div class="mt-4 flex flex-wrap gap-3">
+				<input
+					class={field}
+					style="flex:1"
+					aria-label="Cari log"
+					placeholder="Cari nama / nomor dokumen / pengguna"
+					bind:value={logSearch}
+				/>
+				<select class={field} style="width:auto" aria-label="Jenis aksi" bind:value={logFilter}
+					><option value="all">Semua aksi</option><option value="upload">Upload</option><option
+						value="edit">Edit</option
+					><option value="pdf">Ganti PDF</option><option value="delete">Hapus</option></select
+				>
+			</div>
+			{#if data.logs.length}<p class="mt-2 text-xs text-muted-foreground">
+					Menampilkan {filteredLogs.length} dari {data.logs.length} aktivitas.
+				</p>{/if}
+			<div class="mt-2 max-h-96 divide-y overflow-y-auto">
+				{#each filteredLogs as log (log.id)}
 					<div class="py-3 text-sm">
 						<p class="font-medium">
 							{log.action === 'upload' ? 'Upload' : log.action === 'edit' ? 'Edit' : 'Hapus'} · {(
@@ -407,7 +442,9 @@
 						</details>
 					</div>
 				{:else}<p class="py-4 text-sm text-muted-foreground">
-						Belum ada aktivitas tercatat.
+						{data.logs.length
+							? 'Tidak ada aktivitas yang cocok dengan pencarian.'
+							: 'Belum ada aktivitas tercatat.'}
 					</p>{/each}
 			</div>
 		</div>
