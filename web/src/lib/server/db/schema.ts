@@ -17,6 +17,8 @@ export const user = pgTable('user', {
 	username: text('username').unique(),
 	email: text('email').notNull().unique(),
 	role: text('role').notNull().default('user'),
+	accountStatus: text('account_status').notNull().default('active'),
+	passwordChangedAt: timestamp('password_changed_at', { withTimezone: true }),
 	// Profil dari tabel `user` aplikasi PostIt lama.
 	nik: text('nik'),
 	nama: text('nama'),

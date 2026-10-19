@@ -1,73 +1,85 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { mkdir, rename, writeFile } from 'node:fs/promises';
+import { mkdir, rename, writeFile, rm } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { env } from '$env/dynamic/private';
-
+import { documentStatus, validDocumentDates } from '$lib/document-status';
 import type { Departement, SopDoc, TypeDoc } from '$lib/sop';
 
-// Sementara data dibaca dari storage/sop-data.json (hasil scripts/sop_json_from_sql.py)
-// karena Postgres lokal belum jalan. Nanti isi fungsi di file ini diganti query ke
-// tabel departement + sopdoc (PLAN §5.1); pemanggilnya tidak perlu berubah.
-
-interface SopRow extends Omit<SopDoc, 'has_file'> {
+interface SopRow extends Omit<SopDoc, 'has_file' | 'status'> {
 	file: string | null;
+	deleted_at?: string;
+	content_updated_at?: string;
 }
-
+export interface DocumentActor {
+	id: string;
+	name: string;
+	role: string;
+}
+export interface DocumentLog {
+	id: string;
+	documentId: number;
+	action: 'upload' | 'edit' | 'delete';
+	pdfReplaced: boolean;
+	at: string;
+	actor: DocumentActor;
+	before: Omit<SopDoc, 'has_file' | 'status'> | null;
+	after: Omit<SopDoc, 'has_file' | 'status'> | null;
+}
 interface SopData {
 	departement: Departement[];
 	sopdoc: SopRow[];
+	audit?: DocumentLog[];
 }
-
 const storageDir = () => path.resolve(env.SOP_STORAGE_DIR || '../storage/sop');
-
 const dataFile = () => path.join(storageDir(), '..', 'sop-data.json');
-
-let cache: SopData | null = null;
-
 function load(): SopData {
-	if (!cache) {
-		cache = JSON.parse(readFileSync(dataFile(), 'utf-8')) as SopData;
-	}
-	return cache;
+	return JSON.parse(readFileSync(dataFile(), 'utf-8')) as SopData;
 }
-
-/** Path absolut file PDF, atau null kalau nama file kosong / keluar dari folder storage. */
 function resolveFile(file: string | null): string | null {
 	if (!file) return null;
-	const dir = storageDir();
-	const full = path.resolve(dir, file);
-	// nama file berasal dari DB, tapi tetap dicek supaya tidak bisa keluar dari folder
-	if (path.dirname(full) !== dir) return null;
-	return full;
+	const full = path.resolve(storageDir(), file);
+	return path.dirname(full) === storageDir() ? full : null;
 }
-
-function toClient({ file, ...doc }: SopRow): SopDoc {
-	const full = resolveFile(file);
-	return { ...doc, has_file: !!full && existsSync(full) };
+function toClient(row: SopRow): SopDoc {
+	const full = resolveFile(row.file);
+	return { ...snapshot(row)!, status: documentStatus(row), has_file: !!full && existsSync(full) };
 }
-
-/** Departemen aktif (urut id) + dokumen aktif sesuai type_doc, untuk tree SOP. */
-export function listSop(type: TypeDoc): { departements: Departement[]; docs: SopDoc[] } {
+export function listSop(
+	type: TypeDoc,
+	options: { includeWaiting?: boolean } = {}
+): { departements: Departement[]; docs: SopDoc[] } {
 	const data = load();
 	return {
 		departements: [...data.departement].sort((a, b) => a.id - b.id),
-		docs: data.sopdoc.filter((d) => d.type_doc === type).map(toClient)
+		docs: data.sopdoc
+			.filter(
+				(d) =>
+					d.type_doc === type &&
+					documentStatus(d) !== 'deleted' &&
+					(options.includeWaiting || documentStatus(d) === 'active')
+			)
+			.map(toClient)
 	};
 }
-
-/** Path file PDF untuk dokumen aktif, atau null kalau dokumen / filenya tidak ada. */
-export function getSopFilePath(id: number): string | null {
+export function listDocumentLogs(): DocumentLog[] {
+	return [...(load().audit ?? [])].reverse();
+}
+export function getSopFilePath(id: number, includeWaiting = false): string | null {
 	const row = load().sopdoc.find((d) => d.id === id);
-	const full = resolveFile(row?.file ?? null);
+	if (
+		!row ||
+		documentStatus(row) === 'deleted' ||
+		(!includeWaiting && documentStatus(row) !== 'active')
+	)
+		return null;
+	const full = resolveFile(row.file);
 	return full && existsSync(full) ? full : null;
 }
-
-/** Nama file internal untuk proses server, tidak pernah dikirim ke client. */
 export function getSopFileName(id: number): string | null {
-	return load().sopdoc.find((d) => d.id === id)?.file ?? null;
+	return load().sopdoc.find((d) => d.id === id && !d.deleted_at)?.file ?? null;
 }
-
-export interface CreateSopDocumentInput {
+export interface DocumentMetadata {
 	type: TypeDoc;
 	departementId: number;
 	namaDokumen: string;
@@ -75,53 +87,150 @@ export interface CreateSopDocumentInput {
 	noRev: number;
 	tglBerlaku: string | null;
 	tglExpired: string | null;
+}
+export interface CreateSopDocumentInput extends DocumentMetadata {
 	filename: string;
 	pdf: Uint8Array;
 }
 
-function safePdfFilename(filename: string) {
-	const base = path.basename(filename).replace(/[^a-zA-Z0-9._-]/g, '-');
-	if (!base.toLowerCase().endsWith('.pdf') || base === '.pdf') throw new Error('File harus berformat PDF.');
-	return base;
-}
-
-/** Simpan PDF dan metadata dokumen baru. Hanya dipanggil dari action admin. */
-export async function createSopDocument(input: CreateSopDocumentInput): Promise<SopDoc> {
-	const data = load();
-	if (!data.departement.some((department) => department.id === input.departementId)) {
-		throw new Error('Departemen tidak valid.');
+// One atomic metadata file contains both the mutation and its audit entry.
+// A filesystem lock also serializes requests across Node processes.
+async function mutate<T>(operation: (data: SopData) => Promise<T>): Promise<T> {
+	const lock = `${dataFile()}.lock`;
+	await mkdir(path.dirname(dataFile()), { recursive: true });
+	let acquired = false;
+	for (let attempt = 0; attempt < 100; attempt++) {
+		try {
+			await mkdir(lock);
+			acquired = true;
+			break;
+		} catch (cause) {
+			if ((cause as NodeJS.ErrnoException).code !== 'EEXIST') throw cause;
+			await new Promise((resolve) => setTimeout(resolve, 50));
+		}
 	}
-
-	const id = Math.max(0, ...data.sopdoc.map((doc) => doc.id)) + 1;
-	const filename = `sop-${id}-${safePdfFilename(input.filename)}`;
-	const row: SopRow = {
-		id,
+	if (!acquired) throw new Error('Dokumen sedang diperbarui. Coba kembali.');
+	const temporary = `${dataFile()}.${randomUUID()}.tmp`;
+	try {
+		const data = load();
+		const result = await operation(data);
+		await writeFile(temporary, `${JSON.stringify(data, null, 2)}\n`, 'utf-8');
+		await rename(temporary, dataFile());
+		return result;
+	} finally {
+		await rm(temporary, { force: true });
+		await rm(lock, { recursive: true, force: true });
+	}
+}
+function metadata(input: DocumentMetadata, data: SopData) {
+	if (
+		!['READ', 'FORM'].includes(input.type) ||
+		!input.namaDokumen ||
+		!input.noDokumen ||
+		!Number.isInteger(input.noRev) ||
+		input.noRev < 0
+	)
+		throw new Error('Metadata dokumen tidak valid.');
+	if (!data.departement.some((d) => d.id === input.departementId))
+		throw new Error('Departemen tidak valid.');
+	if (!validDocumentDates(input.tglBerlaku, input.tglExpired))
+		throw new Error('Tanggal tidak valid atau tanggal kedaluwarsa mendahului tanggal berlaku.');
+	return {
 		type_doc: input.type,
 		departement_id: input.departementId,
 		nama_dokumen: input.namaDokumen,
 		no_dokumen: input.noDokumen,
 		no_rev: input.noRev,
 		tgl_berlaku: input.tglBerlaku,
-		tgl_expired: input.tglExpired,
-		file: filename
+		tgl_expired: input.tglExpired
 	};
-
-	const directory = storageDir();
-	await mkdir(directory, { recursive: true });
-	const target = path.join(directory, filename);
-	const temporary = `${target}.uploading`;
-	await writeFile(temporary, input.pdf, { flag: 'wx' });
-	await rename(temporary, target);
-
-	data.sopdoc.push(row);
-	const metadataTemporary = `${dataFile()}.uploading`;
-	try {
-		await writeFile(metadataTemporary, `${JSON.stringify(data, null, 2)}\n`, 'utf-8');
-		await rename(metadataTemporary, dataFile());
-	} catch (cause) {
-		data.sopdoc.pop();
-		throw cause;
-	}
-
-	return toClient(row);
+}
+async function savePdf(id: number, filename: string, pdf: Uint8Array): Promise<string> {
+	const base = path.basename(filename).replace(/[^a-zA-Z0-9._-]/g, '-');
+	if (!base.toLowerCase().endsWith('.pdf') || new TextDecoder().decode(pdf.slice(0, 5)) !== '%PDF-')
+		throw new Error('File harus berformat PDF.');
+	const name = `sop-${id}-${randomUUID()}-${base}`;
+	await mkdir(storageDir(), { recursive: true });
+	await writeFile(path.join(storageDir(), name), pdf, { flag: 'wx' });
+	return name;
+}
+function snapshot(row: SopRow | null) {
+	if (!row) return null;
+	const {
+		id,
+		type_doc,
+		departement_id,
+		nama_dokumen,
+		no_dokumen,
+		no_rev,
+		tgl_berlaku,
+		tgl_expired
+	} = row;
+	return {
+		id,
+		type_doc,
+		departement_id,
+		nama_dokumen,
+		no_dokumen,
+		no_rev,
+		tgl_berlaku,
+		tgl_expired
+	};
+}
+function log(
+	data: SopData,
+	actor: DocumentActor,
+	action: DocumentLog['action'],
+	before: SopRow | null,
+	after: SopRow | null
+) {
+	(data.audit ??= []).push({
+		id: randomUUID(),
+		documentId: (after ?? before)!.id,
+		action,
+		at: new Date().toISOString(),
+		actor,
+		pdfReplaced: !!before && !!after && before.file !== after.file,
+		before: snapshot(before),
+		after: snapshot(after)
+	});
+}
+export async function createSopDocument(
+	input: CreateSopDocumentInput,
+	actor: DocumentActor
+): Promise<SopDoc> {
+	return mutate(async (data) => {
+		const fields = metadata(input, data);
+		const id = Math.max(0, ...data.sopdoc.map((doc) => doc.id)) + 1;
+		const row: SopRow = { id, ...fields, file: await savePdf(id, input.filename, input.pdf) };
+		data.sopdoc.push(row);
+		log(data, actor, 'upload', null, row);
+		return toClient(row);
+	});
+}
+export async function updateSopDocument(
+	id: number,
+	input: DocumentMetadata & { filename?: string; pdf?: Uint8Array },
+	actor: DocumentActor
+): Promise<SopDoc> {
+	return mutate(async (data) => {
+		const row = data.sopdoc.find((doc) => doc.id === id && !doc.deleted_at);
+		if (!row) throw new Error('Dokumen tidak ditemukan.');
+		const before = { ...row };
+		Object.assign(row, metadata(input, data));
+		if (input.pdf && input.filename) {
+			row.file = await savePdf(id, input.filename, input.pdf);
+			row.content_updated_at = new Date().toISOString();
+		}
+		log(data, actor, 'edit', before, row);
+		return toClient(row);
+	});
+}
+export async function deleteSopDocument(id: number, actor: DocumentActor): Promise<void> {
+	return mutate(async (data) => {
+		const row = data.sopdoc.find((doc) => doc.id === id && !doc.deleted_at);
+		if (!row) throw new Error('Dokumen tidak ditemukan.');
+		log(data, actor, 'delete', row, null);
+		row.deleted_at = new Date().toISOString();
+	});
 }

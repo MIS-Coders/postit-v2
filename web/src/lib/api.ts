@@ -5,10 +5,10 @@ import { env } from '$env/dynamic/public';
  * Produksi: https://postit-ai.mahkotagroup.com (via PUBLIC_API_URL di web/.env).
  * Fallback hanya untuk dev lokal.
  */
-const apiBase = env.PUBLIC_API_URL || env.DEV_PORT;
+const apiBase = env.PUBLIC_API_URL;
 
 if (!apiBase) {
-  throw new Error('PUBLIC_API_URL or DEV_PORT must be defined');
+	throw new Error('PUBLIC_API_URL must be defined');
 }
 
 export const API_BASE = apiBase.replace(/\/+$/, '');

@@ -18,6 +18,7 @@ export interface SopDoc {
 	tgl_expired: string | null; // YYYY-MM-DD
 	// Nama file sengaja tidak dikirim; PDF diambil lewat /api/sop/[id]/file.
 	has_file: boolean;
+	status?: 'active' | 'waiting' | 'deleted';
 }
 
 export const sopFileUrl = (id: number) => `/api/sop/${id}/file`;
