@@ -58,6 +58,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			username: user.username,
 			email: user.email,
 			role: user.role,
+			voidStatus: user.voidStatus,
+			accountStatus: user.accountStatus,
 			createdAt: user.createdAt
 		})
 		.from(user)
@@ -116,13 +118,30 @@ export const actions: Actions = {
 		const userId = randomUUID();
 		const passwordHash = await hashPassword(password);
 		await db.transaction(async (tx) => {
-			await tx.insert(user).values({ id: userId, nik, name, idSbu: sbuId, idDepartement: departementId, idLevel: levelId, username, email, role , inputByUserId: locals.legacyUserId ?? 0, inputDate: new Date(), voidStatus: 0, createdAt: new Date() });
+			await tx.insert(user).values({
+				id: userId,
+				nik,
+				name,
+				idSbu: sbuId,
+				idDepartement: departementId,
+				idLevel: levelId,
+				username,
+				email,
+				role,
+				inputByUserid: locals.legacyUserId ?? 0,
+				inputDate: new Date().toISOString(),
+				voidStatus: 0,
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString()
+			});
 			await tx.insert(account).values({
 				id: randomUUID(),
 				accountId: userId,
 				providerId: 'credential',
 				userId,
-				password: passwordHash
+				password: passwordHash,
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString()
 			});
 		});
 
@@ -156,8 +175,47 @@ export const actions: Actions = {
 			.limit(1);
 		if (existingUsername && existingUsername.id !== userId) return fail(409, { error: 'Username tersebut sudah digunakan.' });
 
-		await db.update(user).set({ nik, name, idSbu: sbuId, idDepartement: departementId, idLevel: levelId, username, role, updatedAt: new Date(), editByUserId: locals.legacyUserId ?? 0, editDate: new Date() }).where(eq(user.id, userId));
+		await db.update(user).set({
+			nik,
+			name,
+			idSbu: sbuId,
+			idDepartement: departementId,
+			idLevel: levelId,
+			username,
+			role,
+			updatedAt: new Date().toISOString(),
+			editByUserid: locals.legacyUserId ?? 0,
+			editDate: new Date().toISOString()
+		}).where(eq(user.id, userId));
 		redirect(303, `${url.pathname}${url.search}`);
+	},
+
+	toggleStatus: async ({ request, locals, url }) => {
+		const access = await requireRole(locals, ['admin', 'superadmin']);
+		const form = await request.formData();
+		const userId = value(form, 'userId');
+		const rawStatus = value(form, 'status');
+		const status = rawStatus === '1' ? 1 : 0;
+
+		if (!userId) return fail(400, { error: 'Pengguna tidak ditemukan.' });
+		if (userId === access.userId) return fail(400, { error: 'Akun sendiri tidak dapat diubah statusnya.' });
+
+		const [target] = await db.select({ role: user.role }).from(user).where(eq(user.id, userId)).limit(1);
+		if (!target) return fail(404, { error: 'Pengguna tidak ditemukan.' });
+		if (access.role === 'admin' && target.role === 'superadmin') return fail(403, { error: 'Admin tidak dapat mengubah status akun superadmin.' });
+
+		await db
+			.update(user)
+			.set({
+				voidStatus: status,
+				accountStatus: status === 1 ? 'inactive' : 'active',
+				voidByUserid: locals.legacyUserId ?? 0,
+				voidDate: new Date().toISOString(),
+				updatedAt: new Date().toISOString()
+			})
+			.where(eq(user.id, userId));
+
+		throw redirect(303, `${url.pathname}${url.search}`);
 	},
 
 	delete: async ({ request, locals, url }) => {

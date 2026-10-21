@@ -8,7 +8,7 @@
 		)
 	);
 
-	function formattedDate(date: Date) {
+	function formattedDate(date: Date | string) {
 		return new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(new Date(date));
 	}
 
@@ -24,7 +24,7 @@
 <svelte:head><title>Pengguna · PostIt</title></svelte:head>
 
 <section class="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-10 md:py-8">
-	<div class="mx-auto max-w-6xl">
+	<div class="mx-auto w-full max-w-6xl">
 		<div>
 			<h1 class="text-2xl font-semibold tracking-tight">Manajemen Pengguna</h1>
 			<p class="mt-1 text-sm text-muted-foreground">Tambah, ubah role, atau hapus akses pengguna PostIt.</p>
@@ -126,13 +126,38 @@
 							</label>
 							<button class="rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted" type="submit">Simpan</button>
 						</form>
+
 						<div class="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
 							<span>Dibuat {formattedDate(account.createdAt)}</span>
 							{#if account.id !== data.userId}
-								<form method="POST" action="?/delete">
-									<input type="hidden" name="userId" value={account.id} />
-									<button class="font-medium text-destructive transition hover:underline" type="submit">Hapus pengguna</button>
-								</form>
+								<div class="flex items-center gap-3">
+									<form method="POST" action="?/toggleStatus" class="flex items-center gap-2">
+										<input type="hidden" name="userId" value={account.id} />
+										<input type="hidden" name="status" value={account.voidStatus === 0 ? '0' : '1'} />
+										<label class="inline-flex cursor-pointer items-center gap-2">
+											<span class="font-medium text-muted-foreground">{account.voidStatus === 0 ? 'Aktif' : 'Non aktif'}</span>
+											<input
+												type="checkbox"
+												name="isActive"
+												checked={account.voidStatus === 0}
+												class="peer sr-only"
+												onchange={(event) => {
+													const target = event.currentTarget;
+													const form = target.form;
+													const hiddenStatus = form?.querySelector('input[name="status"]') as HTMLInputElement | null;
+													if (!form || !hiddenStatus) return;
+													hiddenStatus.value = target.checked ? '0' : '1';
+													form.requestSubmit();
+												}}
+											/>
+											<span class="relative h-6 w-11 rounded-full bg-muted-foreground/30 transition peer-checked:bg-emerald-500 after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition after:content-[''] peer-checked:after:translate-x-5"></span>
+										</label>
+									</form>
+									<form method="POST" action="?/delete">
+										<input type="hidden" name="userId" value={account.id} />
+										<button class="font-medium text-destructive transition hover:underline" type="submit">Hapus pengguna</button>
+									</form>
+								</div>
 							{:else}
 								<span>Akun Anda</span>
 							{/if}
