@@ -282,6 +282,71 @@ export const actions: Actions = {
 		redirect(303, `${url.pathname}${url.search}`);
 	},
 
+	resetPassword: async ({ request, locals }) => {
+		const access = await requireRole(locals, ['admin', 'superadmin']);
+		const form = await request.formData();
+		const userId = value(form, 'userId');
+		const password = String(form.get('password') ?? '');
+
+		if (!userId) return fail(400, { error: 'Pengguna tidak ditemukan.' });
+		if (userId === access.userId)
+			return fail(400, { error: 'Ganti password akun sendiri melalui halaman Profil.' });
+		if (!validPassword(password)) return fail(400, { error: passwordHelp });
+
+		const [target] = await db
+			.select({ role: user.role, name: user.name })
+			.from(user)
+			.where(eq(user.id, userId))
+			.limit(1);
+		if (!target) return fail(404, { error: 'Pengguna tidak ditemukan.' });
+		if (access.role === 'admin' && target.role === 'superadmin')
+			return fail(403, { error: 'Admin tidak dapat mereset password akun superadmin.' });
+
+		const passwordHash = await hashPassword(password);
+		try {
+			await db.transaction(async (tx) => {
+				const [credential] = await tx
+					.select({ id: account.id })
+					.from(account)
+					.where(and(eq(account.userId, userId), eq(account.providerId, 'credential')))
+					.limit(1);
+				if (credential) {
+					await tx
+						.update(account)
+						.set({ password: passwordHash, updatedAt: new Date() })
+						.where(eq(account.id, credential.id));
+				} else {
+					await tx.insert(account).values({
+						id: randomUUID(),
+						accountId: userId,
+						providerId: 'credential',
+						userId,
+						password: passwordHash,
+						createdAt: new Date(),
+						updatedAt: new Date()
+					});
+				}
+				// Password dari admin bersifat sementara: pengguna wajib menggantinya saat login berikutnya.
+				await tx
+					.update(user)
+					.set({
+						passwordChangedAt: null,
+						editByUserid: locals.legacyUserId ?? 0,
+						editDate: new Date(),
+						updatedAt: new Date()
+					})
+					.where(eq(user.id, userId));
+				await tx.delete(session).where(eq(session.userId, userId));
+			});
+		} catch (cause) {
+			console.error('Gagal mereset password pengguna', cause);
+			return fail(500, { error: 'Password gagal direset. Silakan coba kembali.' });
+		}
+		return {
+			success: `Password ${target.name} berhasil direset. Pengguna wajib mengganti password saat login berikutnya.`
+		};
+	},
+
 	toggleStatus: async ({ request, locals, url }) => {
 		const access = await requireRole(locals, ['admin', 'superadmin']);
 		const form = await request.formData();
