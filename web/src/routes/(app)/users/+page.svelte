@@ -294,7 +294,7 @@
 												class="relative h-6 w-11 rounded-full bg-muted-foreground/30 transition peer-checked:bg-emerald-500 after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition after:content-[''] peer-checked:after:translate-x-5"
 											></span>
 										</label>
-									</form>
+									</form> -->
 									<button
 										class="font-medium text-foreground transition hover:underline"
 										type="button"
