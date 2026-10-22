@@ -129,10 +129,10 @@ export const actions: Actions = {
 				email,
 				role,
 				inputByUserid: locals.legacyUserId ?? 0,
-				inputDate: new Date().toISOString(),
+				inputDate: new Date(),
 				voidStatus: 0,
-				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString()
+				createdAt: new Date(),
+				updatedAt: new Date()
 			});
 			await tx.insert(account).values({
 				id: randomUUID(),
@@ -140,8 +140,8 @@ export const actions: Actions = {
 				providerId: 'credential',
 				userId,
 				password: passwordHash,
-				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString()
+				createdAt: new Date(),
+				updatedAt: new Date()
 			});
 		});
 
@@ -183,9 +183,9 @@ export const actions: Actions = {
 			idLevel: levelId,
 			username,
 			role,
-			updatedAt: new Date().toISOString(),
+			updatedAt: new Date(),
 			editByUserid: locals.legacyUserId ?? 0,
-			editDate: new Date().toISOString()
+			editDate: new Date()
 		}).where(eq(user.id, userId));
 		redirect(303, `${url.pathname}${url.search}`);
 	},
@@ -210,8 +210,8 @@ export const actions: Actions = {
 				voidStatus: status,
 				accountStatus: status === 1 ? 'inactive' : 'active',
 				voidByUserid: locals.legacyUserId ?? 0,
-				voidDate: new Date().toISOString(),
-				updatedAt: new Date().toISOString()
+				voidDate: new Date(),
+				updatedAt: new Date()
 			})
 			.where(eq(user.id, userId));
 
