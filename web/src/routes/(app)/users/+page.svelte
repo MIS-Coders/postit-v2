@@ -1,6 +1,8 @@
 <script lang="ts">
 	let { data, form } = $props();
 
+	let resetPasswordFor = $state<string | null>(null);
+
 	const field =
 		'mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary';
 	const pageNumbers = $derived(
@@ -42,6 +44,14 @@
 				class="mt-5 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
 			>
 				{form.error}
+			</p>
+		{/if}
+
+		{#if form?.success}
+			<p
+				class="mt-5 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+			>
+				{form.success}
 			</p>
 		{/if}
 
@@ -284,7 +294,15 @@
 												class="relative h-6 w-11 rounded-full bg-muted-foreground/30 transition peer-checked:bg-emerald-500 after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition after:content-[''] peer-checked:after:translate-x-5"
 											></span>
 										</label>
-									</form> -->
+									</form>
+									<button
+										class="font-medium text-foreground transition hover:underline"
+										type="button"
+										aria-expanded={resetPasswordFor === account.id}
+										onclick={() =>
+											(resetPasswordFor = resetPasswordFor === account.id ? null : account.id)}
+										>Reset password</button
+									>
 									<form method="POST" action="?/delete">
 										<input type="hidden" name="userId" value={account.id} />
 										<button
@@ -297,6 +315,40 @@
 								<span>Akun Anda</span>
 							{/if}
 						</div>
+						{#if resetPasswordFor === account.id}
+							<form
+								method="POST"
+								action="?/resetPassword"
+								class="mt-3 flex flex-col gap-3 rounded-xl border bg-muted/40 p-4 md:flex-row md:items-end"
+							>
+								<input type="hidden" name="userId" value={account.id} />
+								<label class="text-sm font-medium md:w-80"
+									>Password sementara untuk {account.name}<input
+										class={field}
+										name="password"
+										type="password"
+										minlength="8"
+										autocomplete="new-password"
+										required
+									/></label
+								>
+								<p class="text-xs text-muted-foreground md:flex-1">
+									Minimal 8 karakter, huruf besar, huruf kecil, dan karakter spesial. Sesi pengguna
+									akan diakhiri dan ia wajib membuat password baru saat login berikutnya.
+								</p>
+								<div class="flex gap-2">
+									<button
+										class="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+										type="button"
+										onclick={() => (resetPasswordFor = null)}>Batal</button
+									>
+									<button
+										class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+										type="submit">Reset password</button
+									>
+								</div>
+							</form>
+						{/if}
 					</div>
 				{:else}
 					<p class="px-5 py-10 text-center text-sm text-muted-foreground">
