@@ -47,31 +47,62 @@
 
 		<form method="POST" action="?/create" class="mt-6 rounded-2xl border bg-card p-5 md:p-6">
 			<h2 class="font-semibold">Tambah pengguna</h2>
+			<p class="mt-2 text-xs text-muted-foreground">
+				Password awal minimal 8 karakter, huruf besar, huruf kecil, dan karakter spesial. Pengguna
+				wajib membuat password sendiri saat login pertama.
+			</p>
 			<div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
 				<label class="text-sm font-medium">NIK<input class={field} name="nik" required /></label>
-				<label class="text-sm font-medium">Nama<input class={field} name="name" autocomplete="name" required /></label>
-				<label class="text-sm font-medium">Username<input class={field} name="username" autocomplete="username" required /></label>
-				<label class="text-sm font-medium">Email<input class={field} name="email" type="email" autocomplete="email" required /></label>
-				<label class="text-sm font-medium">Bisnis Unit
+				<label class="text-sm font-medium"
+					>Nama<input class={field} name="name" autocomplete="name" required /></label
+				>
+				<label class="text-sm font-medium"
+					>Username<input class={field} name="username" autocomplete="username" required /></label
+				>
+				<label class="text-sm font-medium"
+					>Email<input
+						class={field}
+						name="email"
+						type="email"
+						autocomplete="email"
+						required
+					/></label
+				>
+				<label class="text-sm font-medium"
+					>Bisnis Unit
 					<select class={field} name="sbuId" required>
 						<option value="">Pilih Bisnis Unit</option>
 						{#each data.sbus as sbu}<option value={sbu.id}>{sbu.namaSbu}</option>{/each}
 					</select>
 				</label>
-				<label class="text-sm font-medium">Departement
+				<label class="text-sm font-medium"
+					>Departement
 					<select class={field} name="departementId" required>
 						<option value="">Pilih departement</option>
-						{#each data.departments as department}<option value={department.id}>{department.namaDepartement}</option>{/each}
+						{#each data.departments as department}<option value={department.id}
+								>{department.namaDepartement}</option
+							>{/each}
 					</select>
 				</label>
-				<label class="text-sm font-medium">Jabatan
+				<label class="text-sm font-medium"
+					>Jabatan
 					<select class={field} name="levelId" required>
 						<option value="">Pilih jabatan</option>
 						{#each data.levels as level}<option value={level.id}>{level.namaLevel}</option>{/each}
 					</select>
 				</label>
-				<label class="text-sm font-medium">Password awal<input class={field} name="password" type="password" minlength="8" autocomplete="new-password" required /></label>
-				<label class="text-sm font-medium">Role
+				<label class="text-sm font-medium"
+					>Password awal<input
+						class={field}
+						name="password"
+						type="password"
+						minlength="8"
+						autocomplete="new-password"
+						required
+					/></label
+				>
+				<label class="text-sm font-medium"
+					>Role
 					<select class={field} name="role" value="user">
 						{#each data.assignableRoles as role}<option value={role}>{role}</option>{/each}
 					</select>
@@ -94,47 +125,101 @@
 					</p>
 				</div>
 				<form method="GET" class="flex w-full flex-wrap gap-2 md:w-auto md:flex-nowrap">
-					<input class="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary md:w-64" name="q" value={data.search} placeholder="Cari nama, username, email…" />
-					<select class="rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary" name="status" value={data.statusFilter ?? ''}>
+					<input
+						class="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary md:w-64"
+						name="q"
+						value={data.search}
+						placeholder="Cari nama, username, email…"
+					/>
+					<select
+						class="rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+						name="status"
+						value={data.statusFilter ?? ''}
+					>
 						<option value="">Semua status</option>
-						{#each data.allStatus as status}<option value={status}>{status === 'active' ? 'Aktif' :'Nonaktif'}</option>{/each}
+						{#each data.allStatus as status}<option value={status}
+								>{status === 'active' ? 'Aktif' : 'Nonaktif'}</option
+							>{/each}
 					</select>
-					<select class="rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary" name="role" value={data.roleFilter ?? ''}>
+					<select
+						class="rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+						name="role"
+						value={data.roleFilter ?? ''}
+					>
 						<option value="">Semua role</option>
 						{#each data.allRoles as role}<option value={role}>{role}</option>{/each}
 					</select>
-					<button class="rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted" type="submit">Cari</button>
-					{#if data.search || data.roleFilter || data.statusFilter}<a class="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground" href="?">Reset</a>{/if}
+					<button
+						class="rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted"
+						type="submit">Cari</button
+					>
+					{#if data.search || data.roleFilter || data.statusFilter}<a
+							class="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+							href="?">Reset</a
+						>{/if}
 				</form>
 			</div>
 			<div class="divide-y">
 				{#each data.users as account (account.id)}
 					<div class="p-5 md:px-6">
-						<form method="POST" action="?/update" class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+						<form
+							method="POST"
+							action="?/update"
+							class="grid gap-3 md:grid-cols-2 md:items-end xl:grid-cols-5"
+						>
 							<input type="hidden" name="userId" value={account.id} />
-							<label class="text-sm font-medium">NIK<input class={field} name="nik" value={account.nik} required/></label>
-							<label class="text-sm font-medium">Nama<input class={field} name="name" value={account.name} required /></label>
-							<label class="text-sm font-medium">Username<input class={field} name="username" value={account.username ?? ''} required /></label>
-							<label class="text-sm font-medium">SBU
+							<label class="text-sm font-medium"
+								>NIK<input class={field} name="nik" value={account.nik} required /></label
+							>
+							<label class="text-sm font-medium"
+								>Nama<input class={field} name="name" value={account.name} required /></label
+							>
+							<label class="text-sm font-medium"
+								>Username<input
+									class={field}
+									name="username"
+									value={account.username ?? ''}
+									required
+								/></label
+							>
+							<label class="text-sm font-medium"
+								>SBU
 								<select class={field} name="sbuId" value={account.sbuId ?? ''} required>
 									<option value="">Pilih SBU</option>
 									{#each data.sbus as sbu}<option value={sbu.id}>{sbu.namaSbu}</option>{/each}
 								</select>
 							</label>
-							<label class="text-sm font-medium">Departement
-								<select class={field} name="departementId" value={account.departmentId ?? ''} required>
+							<label class="text-sm font-medium"
+								>Departement
+								<select
+									class={field}
+									name="departementId"
+									value={account.departmentId ?? ''}
+									required
+								>
 									<option value="">Pilih departement</option>
-									{#each data.departments as department}<option value={department.id}>{department.namaDepartement}</option>{/each}
+									{#each data.departments as department}<option value={department.id}
+											>{department.namaDepartement}</option
+										>{/each}
 								</select>
 							</label>
-							<label class="text-sm font-medium">Jabatan
+							<label class="text-sm font-medium"
+								>Jabatan
 								<select class={field} name="levelId" value={account.levelId ?? ''} required>
 									<option value="">Pilih jabatan</option>
-									{#each data.levels as level}<option value={level.id}>{level.namaLevel}</option>{/each}
+									{#each data.levels as level}<option value={level.id}>{level.namaLevel}</option
+										>{/each}
 								</select>
 							</label>
-							<label class="text-sm font-medium">Email<input class={`${field} text-muted-foreground`} value={account.email} disabled /></label>
-							<label class="text-sm font-medium">Role
+							<label class="text-sm font-medium"
+								>Email<input
+									class={`${field} text-muted-foreground`}
+									value={account.email}
+									disabled
+								/></label
+							>
+							<label class="text-sm font-medium"
+								>Role
 								{#if account.id === data.userId}
 									<input name="role" type="hidden" value={account.role} />
 									<select class={field} value={account.role} disabled>
@@ -164,7 +249,6 @@
 								type="submit">Simpan</button
 							>
 						</form>
-
 						<div class="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
 							<span>Dibuat {formattedDate(account.createdAt)}</span>
 							{#if account.id !== data.userId}
@@ -173,7 +257,9 @@
 										<input type="hidden" name="userId" value={account.id} />
 										<input type="hidden" name="status" value={account.voidStatus === 0 ? '0' : '1'} />
 										<label class="inline-flex cursor-pointer items-center gap-2">
-											<span class="font-medium text-muted-foreground">{account.voidStatus === 0 ? 'Aktif' : 'Non aktif'}</span>
+											<span class="font-medium text-muted-foreground"
+												>{account.voidStatus === 0 ? 'Aktif' : 'Non aktif'}</span
+											>
 											<input
 												type="checkbox"
 												name="isActive"
@@ -182,18 +268,25 @@
 												onchange={(event) => {
 													const target = event.currentTarget;
 													const form = target.form;
-													const hiddenStatus = form?.querySelector('input[name="status"]') as HTMLInputElement | null;
+													const hiddenStatus = form?.querySelector(
+														'input[name="status"]'
+													) as HTMLInputElement | null;
 													if (!form || !hiddenStatus) return;
 													hiddenStatus.value = target.checked ? '0' : '1';
 													form.requestSubmit();
 												}}
 											/>
-											<span class="relative h-6 w-11 rounded-full bg-muted-foreground/30 transition peer-checked:bg-emerald-500 after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition after:content-[''] peer-checked:after:translate-x-5"></span>
+											<span
+												class="relative h-6 w-11 rounded-full bg-muted-foreground/30 transition peer-checked:bg-emerald-500 after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition after:content-[''] peer-checked:after:translate-x-5"
+											></span>
 										</label>
 									</form>
 									<form method="POST" action="?/delete">
 										<input type="hidden" name="userId" value={account.id} />
-										<button class="font-medium text-destructive transition hover:underline" type="submit">Hapus pengguna</button>
+										<button
+											class="font-medium text-destructive transition hover:underline"
+											type="submit">Hapus pengguna</button
+										>
 									</form>
 								</div>
 							{:else}

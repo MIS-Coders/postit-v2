@@ -4,8 +4,10 @@ import { and, count, desc, eq, ilike, isNull, ne, or } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 
 import { db } from '$lib/server/db';
-import { account, user, sbu, departement, level } from '$lib/server/db/schema';
+import { account, user, session, sbu, departement, level } from '$lib/server/db/schema';
 import { requireRole, roles, type Role } from '$lib/server/roles';
+
+import { passwordHelp, validPassword } from '$lib/password-policy';
 
 import { parseIdInput } from './user-ids';
 import type { Actions, PageServerLoad } from './$types';
@@ -79,9 +81,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			username: user.username,
 			email: user.email,
 			role: user.role,
-			voidStatus: user.voidStatus,
+			createdAt: user.createdAt,
 			accountStatus: user.accountStatus,
-			createdAt: user.createdAt
+			voidStatus: user.voidStatus
 		})
 		.from(user)
 		.leftJoin(sbu, eq(user.idSbu, sbu.id))
@@ -97,7 +99,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.select({ id: departement.id, namaDepartement: departement.namaDepartement })
 		.from(departement)
 		.orderBy(departement.namaDepartement);
-	const levels = await db.select({ id: level.id, namaLevel: level.namaLevel }).from(level).orderBy(level.namaLevel);
+	const levels = await db
+		.select({ id: level.id, namaLevel: level.namaLevel })
+		.from(level)
+		.orderBy(level.namaLevel);
 
 	return {
 		...access,
@@ -131,8 +136,22 @@ export const actions: Actions = {
 		if (!validPassword(password)) return fail(400, { error: passwordHelp });
 		const role = value(form, 'role');
 
-		if (!nik || !name || sbuId === null || departementId === null || levelId === null || !usernamePattern.test(username) || !emailPattern.test(email) || password.length < 8 || !validRole(role) || !canAssignRole(access.role, role)) {
-			return fail(400, { error: 'Isi nik, nama, sbu, departement, level, username valid, email valid, password minimal 8 karakter, dan role dengan benar.' });
+		if (
+			!nik ||
+			!name ||
+			sbuId === null ||
+			departementId === null ||
+			levelId === null ||
+			!usernamePattern.test(username) ||
+			!emailPattern.test(email) ||
+			password.length < 8 ||
+			!validRole(role) ||
+			!canAssignRole(access.role, role)
+		) {
+			return fail(400, {
+				error:
+					'Isi nik, nama, sbu, departement, level, username valid, email valid, password minimal 8 karakter, dan role dengan benar.'
+			});
 		}
 
 		const [existing] = await db
@@ -150,31 +169,33 @@ export const actions: Actions = {
 
 		const userId = randomUUID();
 		const passwordHash = await hashPassword(password);
-		await db.transaction(async (tx) => {
-			await tx.insert(user).values({
-				id: userId,
-				nik,
-				name,
-				idSbu: sbuId,
-				idDepartement: departementId,
-				idLevel: levelId,
-				username,
-				email,
-				role,
-				inputByUserid: locals.legacyUserId ?? 0,
-				inputDate: new Date(),
-				voidStatus: 0,
-				createdAt: new Date(),
-				updatedAt: new Date()
-			});
-			await tx.insert(account).values({
-				id: randomUUID(),
-				accountId: userId,
-				providerId: 'credential',
-				userId,
-				password: passwordHash,
-				createdAt: new Date(),
-				updatedAt: new Date()
+		try {
+			await db.transaction(async (tx) => {
+				await tx.insert(user).values({
+					id: userId,
+					nik,
+					name,
+					idSbu: sbuId,
+					idDepartement: departementId,
+					idLevel: levelId,
+					username,
+					email,
+					role,
+					inputByUserid: locals.legacyUserId ?? 0,
+					inputDate: new Date(),
+					voidStatus: 0,
+					createdAt: new Date(),
+					updatedAt: new Date()
+				});
+				await tx.insert(account).values({
+					id: randomUUID(),
+					accountId: userId,
+					providerId: 'credential',
+					userId,
+					password: passwordHash,
+					createdAt: new Date(),
+					updatedAt: new Date()
+				});
 			});
 		} catch (cause) {
 			console.error('Gagal menambahkan pengguna', cause);
@@ -201,7 +222,18 @@ export const actions: Actions = {
 		if (userId === access.userId && accountStatus !== 'active')
 			return fail(400, { error: 'Akun sendiri tidak dapat dinonaktifkan.' });
 
-		if (!userId || !nik || !name || sbuId === null || departementId === null || levelId === null || !usernamePattern.test(username) || !validRole(role) || !canAssignRole(access.role, role)) return fail(400, { error: 'Data pengguna tidak valid.' });
+		if (
+			!userId ||
+			!nik ||
+			!name ||
+			sbuId === null ||
+			departementId === null ||
+			levelId === null ||
+			!usernamePattern.test(username) ||
+			!validRole(role) ||
+			!canAssignRole(access.role, role)
+		)
+			return fail(400, { error: 'Data pengguna tidak valid.' });
 		if (userId === access.userId && role !== access.role) {
 			return fail(400, { error: 'Role akun sendiri tidak dapat diubah dari halaman ini.' });
 		}
@@ -222,18 +254,31 @@ export const actions: Actions = {
 		if (existingUsername && existingUsername.id !== userId)
 			return fail(409, { error: 'Username tersebut sudah digunakan.' });
 
-		await db.update(user).set({
-			nik,
-			name,
-			idSbu: sbuId,
-			idDepartement: departementId,
-			idLevel: levelId,
-			username,
-			role,
-			updatedAt: new Date(),
-			editByUserid: locals.legacyUserId ?? 0,
-			editDate: new Date()
-		}).where(eq(user.id, userId));
+		try {
+			await db.transaction(async (tx) => {
+				await tx
+					.update(user)
+					.set({
+						nik,
+						name,
+						idSbu: sbuId,
+						idDepartement: departementId,
+						idLevel: levelId,
+						username,
+						role,
+						accountStatus,
+						voidStatus: accountStatus === 'active' ? 0 : 1,
+						updatedAt: new Date(),
+						editByUserid: locals.legacyUserId ?? 0,
+						editDate: new Date()
+					})
+					.where(eq(user.id, userId));
+				if (accountStatus !== 'active') await tx.delete(session).where(eq(session.userId, userId));
+			});
+		} catch (cause) {
+			console.error('Gagal memperbarui pengguna', cause);
+			return fail(500, { error: 'Pengguna gagal diperbarui. Silakan coba kembali.' });
+		}
 		redirect(303, `${url.pathname}${url.search}`);
 	},
 
@@ -241,28 +286,40 @@ export const actions: Actions = {
 		const access = await requireRole(locals, ['admin', 'superadmin']);
 		const form = await request.formData();
 		const userId = value(form, 'userId');
-		const rawStatus = value(form, 'status');
-		const status = rawStatus === '1' ? 1 : 0;
+		const status = value(form, 'status') === '1' ? 1 : 0;
 
 		if (!userId) return fail(400, { error: 'Pengguna tidak ditemukan.' });
-		if (userId === access.userId) return fail(400, { error: 'Akun sendiri tidak dapat diubah statusnya.' });
+		if (userId === access.userId)
+			return fail(400, { error: 'Akun sendiri tidak dapat diubah statusnya.' });
 
-		const [target] = await db.select({ role: user.role }).from(user).where(eq(user.id, userId)).limit(1);
+		const [target] = await db
+			.select({ role: user.role })
+			.from(user)
+			.where(eq(user.id, userId))
+			.limit(1);
 		if (!target) return fail(404, { error: 'Pengguna tidak ditemukan.' });
-		if (access.role === 'admin' && target.role === 'superadmin') return fail(403, { error: 'Admin tidak dapat mengubah status akun superadmin.' });
+		if (access.role === 'admin' && target.role === 'superadmin')
+			return fail(403, { error: 'Admin tidak dapat mengubah status akun superadmin.' });
 
-		await db
-			.update(user)
-			.set({
-				voidStatus: status,
-				accountStatus: status === 1 ? 'inactive' : 'active',
-				voidByUserid: locals.legacyUserId ?? 0,
-				voidDate: new Date(),
-				updatedAt: new Date()
-			})
-			.where(eq(user.id, userId));
-
-		throw redirect(303, `${url.pathname}${url.search}`);
+		try {
+			await db.transaction(async (tx) => {
+				await tx
+					.update(user)
+					.set({
+						voidStatus: status,
+						accountStatus: status === 1 ? 'inactive' : 'active',
+						voidByUserid: locals.legacyUserId ?? 0,
+						voidDate: new Date(),
+						updatedAt: new Date()
+					})
+					.where(eq(user.id, userId));
+				if (status === 1) await tx.delete(session).where(eq(session.userId, userId));
+			});
+		} catch (cause) {
+			console.error('Gagal mengubah status pengguna', cause);
+			return fail(500, { error: 'Status pengguna gagal diubah. Silakan coba kembali.' });
+		}
+		redirect(303, `${url.pathname}${url.search}`);
 	},
 
 	delete: async ({ request, locals, url }) => {

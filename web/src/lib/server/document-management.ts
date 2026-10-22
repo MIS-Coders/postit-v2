@@ -19,8 +19,8 @@ export const loadDocumentManagement = async ({
 	url
 }: Pick<RequestEvent, 'locals' | 'url'>) => {
 	const access = await requireRole(locals, ['ms', 'superadmin']);
-	const { departements, docs: readDocs } = listSop('READ', { includeWaiting: true });
-	const docs = [...readDocs, ...listSop('FORM', { includeWaiting: true }).docs];
+	const { departements, docs: readDocs } = await listSop('READ', { includeWaiting: true });
+	const docs = [...readDocs, ...(await listSop('FORM', { includeWaiting: true })).docs];
 	const jobId = url.searchParams.get('job');
 	let job = null;
 
@@ -84,7 +84,7 @@ export const documentActions = {
 				},
 				actor
 			);
-			const department = listSop(type, { includeWaiting: true }).departements.find(
+			const department = (await listSop(type, { includeWaiting: true })).departements.find(
 				(item) => item.id === doc.departement_id
 			);
 			const filename = getSopFileName(doc.id);
@@ -140,7 +140,7 @@ export const documentActions = {
 				},
 				{ id: access.userId, name: locals.user!.name, role: access.role }
 			);
-			const department = listSop(doc.type_doc, { includeWaiting: true }).departements.find(
+			const department = (await listSop(doc.type_doc, { includeWaiting: true })).departements.find(
 				(d) => d.id === doc.departement_id
 			)!;
 			try {
@@ -182,8 +182,8 @@ export const documentActions = {
 	reembed: async ({ request, locals, url }) => {
 		await requireRole(locals, ['ms', 'superadmin']);
 		const id = Number(textValue((await request.formData()).get('documentId')));
-		const { departements, docs: readDocs } = listSop('READ', { includeWaiting: true });
-		const docs = [...readDocs, ...listSop('FORM', { includeWaiting: true }).docs];
+		const { departements, docs: readDocs } = await listSop('READ', { includeWaiting: true });
+		const docs = [...readDocs, ...(await listSop('FORM', { includeWaiting: true })).docs];
 		const doc = docs.find((item) => item.id === id);
 		const department = doc && departements.find((item) => item.id === doc.departement_id);
 		const filename = getSopFileName(id);

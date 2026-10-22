@@ -10,6 +10,14 @@ vi.mock('$env/dynamic/private', () => ({
 		}
 	}
 }));
+// Tanpa database saat test: listDepartmentsFromDb jatuh ke departemen di sop-data.json.
+vi.mock('$lib/server/db', () => ({
+	db: {
+		execute: async () => {
+			throw new Error('Database tidak tersedia saat test.');
+		}
+	}
+}));
 import {
 	createSopDocument,
 	updateSopDocument,
@@ -51,20 +59,20 @@ describe('SOP persistence and audit', () => {
 			)
 		);
 		expect(new Set(docs.map((doc) => doc.id)).size).toBe(6);
-		expect(listSop('READ').docs.length).toBe(6);
+		expect((await listSop('READ')).docs.length).toBe(6);
 		expect(listDocumentLogs().length).toBe(6);
 	});
 	it('hides scheduled/deleted documents while retaining audit snapshots', async () => {
 		const doc = await createSopDocument({ ...input, tglBerlaku: '2099-12-31' }, actor);
-		expect(listSop('READ').docs).toEqual([]);
+		expect((await listSop('READ')).docs).toEqual([]);
 		expect(getSopFilePath(doc.id)).toBeNull();
 		expect(getSopFilePath(doc.id, true)).not.toBeNull();
-		expect(listSop('READ', { includeWaiting: true }).docs[0].status).toBe('waiting');
+		expect((await listSop('READ', { includeWaiting: true })).docs[0].status).toBe('waiting');
 		await updateSopDocument(doc.id, { ...input, namaDokumen: 'Updated', tglBerlaku: null }, actor);
-		expect(listSop('READ').docs[0].nama_dokumen).toBe('Updated');
+		expect((await listSop('READ')).docs[0].nama_dokumen).toBe('Updated');
 		await deleteSopDocument(doc.id, actor);
 		expect(getSopFilePath(doc.id, true)).toBeNull();
-		expect(listSop('READ', { includeWaiting: true }).docs).toEqual([]);
+		expect((await listSop('READ', { includeWaiting: true })).docs).toEqual([]);
 		const logs = listDocumentLogs();
 		expect(logs.map((log) => log.action)).toEqual(['delete', 'edit', 'upload']);
 		expect(logs[1].before?.nama_dokumen).toBe('SOP test');

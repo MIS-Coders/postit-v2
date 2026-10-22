@@ -39,7 +39,11 @@ export const actions: Actions = {
 
 		try {
 			await auth.api.signInEmail({
-				body: { email: account.email, password: String(data.get('password') || ''), callbackURL: next },
+				body: {
+					email: account.email,
+					password: String(data.get('password') || ''),
+					callbackURL: next
+				},
 				headers: event.request.headers
 			});
 		} catch (cause) {
@@ -50,31 +54,6 @@ export const actions: Actions = {
 			// 	console.error('[SIGN IN STACK]', cause.stack);
 			// }
 
-			return fail(cause instanceof APIError ? 400 : 500, { error: cause instanceof APIError ? cause.message : 'Login gagal.' });
-		}
-		redirect(303, next);
-	},
-	signUp: async (event) => {
-		const data = await event.request.formData();
-		const username = String(data.get('username') || '').trim().toLowerCase();
-		const email = String(data.get('email') || '').trim().toLowerCase();
-		const next = nextPath(String(data.get('next') || ''));
-		if (!/^[a-z0-9._-]{3,64}$/.test(username)) {
-			return fail(400, { error: 'Username harus 3–64 karakter: huruf kecil, angka, titik, garis bawah, atau strip.' });
-		}
-		const [existing] = await db.select({ id: user.id }).from(user).where(eq(user.username, username)).limit(1);
-		if (existing) return fail(409, { error: 'Username sudah digunakan.' });
-
-		try {
-			await auth.api.signUpEmail({
-				body: {
-					email: account.email,
-					password: String(data.get('password') || ''),
-					callbackURL: next
-				},
-				headers: event.request.headers
-			});
-		} catch (cause) {
 			return fail(cause instanceof APIError ? 400 : 500, {
 				error: cause instanceof APIError ? cause.message : 'Login gagal.'
 			});
