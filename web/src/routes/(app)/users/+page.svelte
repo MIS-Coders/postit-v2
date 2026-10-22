@@ -16,6 +16,7 @@
 		const params = new URLSearchParams();
 		if (data.search) params.set('q', data.search);
 		if (data.roleFilter) params.set('role', data.roleFilter);
+		if (data.statusFilter) params.set('status', data.statusFilter);
 		params.set('page', String(page));
 		return `?${params.toString()}`;
 	}
@@ -77,12 +78,16 @@
 				</div>
 				<form method="GET" class="flex w-full flex-wrap gap-2 md:w-auto md:flex-nowrap">
 					<input class="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary md:w-64" name="q" value={data.search} placeholder="Cari nama, username, email…" />
+					<select class="rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary" name="status" value={data.statusFilter ?? ''}>
+						<option value="">Semua status</option>
+						{#each data.allStatus as status}<option value={status}>{status === 'active' ? 'Aktif' :'Nonaktif'}</option>{/each}
+					</select>
 					<select class="rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary" name="role" value={data.roleFilter ?? ''}>
 						<option value="">Semua role</option>
 						{#each data.allRoles as role}<option value={role}>{role}</option>{/each}
 					</select>
 					<button class="rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted" type="submit">Cari</button>
-					{#if data.search || data.roleFilter}<a class="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground" href="?">Reset</a>{/if}
+					{#if data.search || data.roleFilter || data.statusFilter}<a class="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground" href="?">Reset</a>{/if}
 				</form>
 			</div>
 			<div class="divide-y">

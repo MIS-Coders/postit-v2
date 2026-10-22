@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { hashPassword } from 'better-auth/crypto';
-import { and, count, desc, eq, ilike, ne, or } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, isNull, ne, or } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 
 import { db } from '$lib/server/db';
@@ -13,6 +13,13 @@ import type { Actions, PageServerLoad } from './$types';
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const usernamePattern = /^[a-z0-9._-]{3,64}$/;
 const pageSize = 10;
+
+const allStatus = ['active', 'inactive'] as const;
+type AccountStatusFilter = (typeof allStatus)[number];
+
+function validStatus(value: string): value is AccountStatusFilter {
+	return allStatus.includes(value as AccountStatusFilter);
+}
 
 function value(form: FormData, field: string) {
 	const input = form.get(field);
@@ -32,6 +39,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const search = url.searchParams.get('q')?.trim() ?? '';
 	const requestedRole = url.searchParams.get('role') ?? '';
 	const roleFilter = validRole(requestedRole) ? requestedRole : null;
+	const requestedStatus = url.searchParams.get('status') ?? '';
+	const statusFilter = validStatus(requestedStatus) ? requestedStatus : null;
 	const requestedPage = Number.parseInt(url.searchParams.get('page') ?? '1', 10);
 	const searchFilter = search
 		? or(ilike(user.name, `%${search}%`), ilike(user.username, `%${search}%`), ilike(user.email, `%${search}%`))
@@ -39,6 +48,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const filter = and(
 		searchFilter,
 		roleFilter ? eq(user.role, roleFilter) : undefined,
+		statusFilter === 'active'
+			? eq(user.voidStatus, 0)
+			: statusFilter === 'inactive'
+				? or(eq(user.voidStatus, 1), isNull(user.voidStatus))
+				: undefined,
 		access.role === 'admin' ? ne(user.role, 'superadmin') : undefined
 	);
 	const [{ total }] = await db.select({ total: count() }).from(user).where(filter);
@@ -86,6 +100,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		levels,
 		search,
 		roleFilter,
+		statusFilter,
+		allStatus,
 		allRoles: roles,
 		assignableRoles: access.role === 'superadmin' ? roles : roles.filter((role) => role !== 'superadmin'),
 		pagination: { page, pageSize, total, totalPages }
