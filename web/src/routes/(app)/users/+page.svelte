@@ -137,9 +137,15 @@
 						value={data.statusFilter ?? ''}
 					>
 						<option value="">Semua status</option>
-						{#each data.allStatus as status}<option value={status}
-								>{status === 'active' ? 'Aktif' : 'Nonaktif'}</option
-							>{/each}
+						{#each data.allStatus as status}
+							<option value={status}>
+								{status === 'active'
+								? 'Aktif'
+								: status === 'inactive'
+									? 'Nonaktif'
+									: 'Resign'}
+							</option>
+						{/each}
 					</select>
 					<select
 						class="rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
@@ -236,9 +242,7 @@
 								<select
 									class={field}
 									name="accountStatus"
-									value={account.accountStatus === 'active' && (account.voidStatus ?? 0) !== 0
-										? 'inactive'
-										: account.accountStatus}
+									value={account.accountStatus ?? 'active'}
 								>
 									<option value="active">Aktif</option><option value="inactive">Nonaktif</option
 									><option value="resigned">Resign</option>
@@ -253,7 +257,7 @@
 							<span>Dibuat {formattedDate(account.createdAt)}</span>
 							{#if account.id !== data.userId}
 								<div class="flex items-center gap-3">
-									<form method="POST" action="?/toggleStatus" class="flex items-center gap-2">
+									<!-- <form method="POST" action="?/toggleStatus" class="flex items-center gap-2">
 										<input type="hidden" name="userId" value={account.id} />
 										<input type="hidden" name="status" value={account.voidStatus === 0 ? '0' : '1'} />
 										<label class="inline-flex cursor-pointer items-center gap-2">
@@ -280,7 +284,7 @@
 												class="relative h-6 w-11 rounded-full bg-muted-foreground/30 transition peer-checked:bg-emerald-500 after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition after:content-[''] peer-checked:after:translate-x-5"
 											></span>
 										</label>
-									</form>
+									</form> -->
 									<form method="POST" action="?/delete">
 										<input type="hidden" name="userId" value={account.id} />
 										<button

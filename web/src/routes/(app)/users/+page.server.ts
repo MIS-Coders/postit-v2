@@ -1,10 +1,10 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { hashPassword } from 'better-auth/crypto';
-import { and, count, desc, eq, ilike, isNull, ne, or } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, ne, or } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 
 import { db } from '$lib/server/db';
-import { account, user, session, sbu, departement, level } from '$lib/server/db/schema';
+import { account, user, session, sbu, departement, level} from '$lib/server/db/schema';
 import { requireRole, roles, type Role } from '$lib/server/roles';
 
 import { passwordHelp, validPassword } from '$lib/password-policy';
@@ -16,7 +16,7 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const usernamePattern = /^[a-z0-9._-]{3,64}$/;
 const pageSize = 10;
 
-const allStatus = ['active', 'inactive'] as const;
+const allStatus = ['active', 'inactive', 'resigned'] as const;
 type AccountStatusFilter = (typeof allStatus)[number];
 
 function validStatus(value: string): value is AccountStatusFilter {
@@ -54,11 +54,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const filter = and(
 		searchFilter,
 		roleFilter ? eq(user.role, roleFilter) : undefined,
-		statusFilter === 'active'
-			? eq(user.voidStatus, 0)
-			: statusFilter === 'inactive'
-				? or(eq(user.voidStatus, 1), isNull(user.voidStatus))
-				: undefined,
+		statusFilter ? eq(user.accountStatus, statusFilter) : undefined,
 		access.role === 'admin' ? ne(user.role, 'superadmin') : undefined
 	);
 	const [{ total }] = await db.select({ total: count() }).from(user).where(filter);
