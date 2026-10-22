@@ -30,6 +30,13 @@ export const actions: Actions = {
 				headers: event.request.headers
 			});
 		} catch (cause) {
+			// console.error('[SIGN IN ERROR]', cause);
+
+			// if (cause instanceof Error) {
+			// 	console.error('[SIGN IN MESSAGE]', cause.message);
+			// 	console.error('[SIGN IN STACK]', cause.stack);
+			// }
+
 			return fail(cause instanceof APIError ? 400 : 500, { error: cause instanceof APIError ? cause.message : 'Login gagal.' });
 		}
 		redirect(303, next);
