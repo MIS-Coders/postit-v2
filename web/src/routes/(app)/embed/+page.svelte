@@ -9,14 +9,43 @@
 	let job = $state<EmbedJob | null>(null);
 	let activeTab = $state<'READ' | 'FORM'>('READ');
 	let legacyPage = $state(1);
+	let documentFilter = $state('all');
+	let documentSearch = $state('');
+	let filteredDocs = $derived(
+		data.docs.filter(
+			(d) =>
+				(documentFilter === 'all' || d.status === documentFilter) &&
+				`${d.nama_dokumen} ${d.no_dokumen}`.toLowerCase().includes(documentSearch.toLowerCase())
+		)
+	);
 	const legacyPageSize = 10;
-	let legacyPageCount = $derived(Math.max(1, Math.ceil(data.docs.length / legacyPageSize)));
+	let legacyPageCount = $derived(Math.max(1, Math.ceil(filteredDocs.length / legacyPageSize)));
 	let legacyDocs = $derived(
-		data.docs.slice((legacyPage - 1) * legacyPageSize, legacyPage * legacyPageSize)
+		filteredDocs.slice((legacyPage - 1) * legacyPageSize, legacyPage * legacyPageSize)
+	);
+
+	let logFilter = $state('all');
+	let logSearch = $state('');
+	let filteredLogs = $derived(
+		data.logs.filter((log) => {
+			const matchesAction =
+				logFilter === 'all' || (logFilter === 'pdf' ? log.pdfReplaced : log.action === logFilter);
+			const states = [log.before, log.after].filter((s) => s !== null);
+			const text = [
+				...states.flatMap((s) => [s.nama_dokumen, s.no_dokumen]),
+				log.actor.name,
+				log.actor.role
+			]
+				.join(' ')
+				.toLowerCase();
+			return matchesAction && text.includes(logSearch.trim().toLowerCase());
+		})
 	);
 
 	$effect(() => {
 		job = data.job;
+		if (form && 'jobId' in form && form.jobId)
+			job = { id: form.jobId, status: 'queued', message: 'Menunggu pemrosesan AI…' };
 	});
 
 	$effect(() => {
@@ -67,6 +96,18 @@
 			</p>
 		{/if}
 
+		{#if form && 'warning' in form && form.warning}<p
+				class="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"
+				role="status"
+			>
+				{form.warning}
+			</p>{/if}
+		{#if form && 'message' in form && form.message}<p
+				class="mt-5 text-sm text-primary"
+				role="status"
+			>
+				{form.message}
+			</p>{/if}
 		{#if job}
 			<div class="mt-5 rounded-xl border bg-muted/40 p-4" role="status">
 				<div class="flex items-center justify-between gap-3">
@@ -174,35 +215,151 @@
 			</button>
 		</form>
 
-		{#if data.role === 'superadmin'}
+		{#if data.role === 'superadmin' || data.role === 'ms'}
 			<div class="mt-6 rounded-2xl border bg-card p-5 md:p-6">
 				<div class="flex items-center gap-2">
 					<RiShieldStarLine class="size-5 text-primary" />
-					<h2 class="font-semibold">Proses SOP lama</h2>
+					<h2 class="font-semibold">Kelola dokumen & waiting list</h2>
 				</div>
 				<p class="mt-1 text-sm text-muted-foreground">
-					Jalankan untuk PDF yang sudah tersedia di halaman SOP. Hanya dokumen yang dipilih yang
-					diproses ulang.
+					Dokumen waiting list aktif otomatis sesuai tanggal berlaku (WIB). Ubah tanggal, metadata,
+					atau file PDF di sini.
 				</p>
+				<div class="mt-4 flex flex-wrap gap-3">
+					<input
+						class={field}
+						style="flex:1"
+						aria-label="Cari dokumen"
+						placeholder="Cari nama / nomor dokumen"
+						bind:value={documentSearch}
+						oninput={() => (legacyPage = 1)}
+					/>
+					<select
+						class={field}
+						style="width:auto"
+						aria-label="Status dokumen"
+						bind:value={documentFilter}
+						onchange={() => (legacyPage = 1)}
+						><option value="all">Semua dokumen</option><option value="waiting">Waiting list</option
+						><option value="active">Aktif</option></select
+					>
+				</div>
 				<div class="mt-4 divide-y rounded-xl border">
 					{#each legacyDocs as doc (doc.id)}
-						<div class="flex items-center justify-between gap-4 p-3">
-							<div class="min-w-0">
-								<p class="truncate text-sm font-medium">{doc.nama_dokumen}</p>
-								<p class="text-xs text-muted-foreground">{doc.no_dokumen}</p>
+						<div class="p-3">
+							<div class="flex items-center justify-between gap-4">
+								<div class="min-w-0">
+									<p class="truncate text-sm font-medium">{doc.nama_dokumen}</p>
+									<p class="text-xs text-muted-foreground">
+										{doc.no_dokumen} · {doc.status === 'waiting'
+											? `Waiting list · Aktif ${doc.tgl_berlaku} WIB`
+											: 'Aktif'}
+									</p>
+								</div>
+								<form method="POST" action="?/reembed">
+									<input name="documentId" type="hidden" value={doc.id} />
+									<button
+										disabled={!doc.has_file}
+										class="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+										type="submit"
+									>
+										<RiRefreshLine class="size-3.5" /> Proses ulang
+									</button>
+								</form>
 							</div>
-							<form method="POST" action="?/reembed">
-								<input name="documentId" type="hidden" value={doc.id} />
-								<button
-									disabled={!doc.has_file}
-									class="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-									type="submit"
+							<details class="mt-3 rounded-lg border p-3">
+								<summary class="cursor-pointer text-sm font-medium">Edit dokumen</summary>
+								<form
+									method="POST"
+									action="?/edit"
+									enctype="multipart/form-data"
+									class="mt-3 grid gap-3 sm:grid-cols-2"
 								>
-									<RiRefreshLine class="size-3.5" /> Proses ulang
-								</button>
+									<input type="hidden" name="documentId" value={doc.id} />
+									<label class="text-sm"
+										>Jenis<select class={field} name="type" value={doc.type_doc}
+											><option value="READ">SOP/IK</option><option value="FORM">Formulir</option
+											></select
+										></label
+									>
+									<label class="text-sm"
+										>Departemen<select class={field} name="departementId" value={doc.departement_id}
+											>{#each data.departements as department}<option value={department.id}
+													>{department.nama_departement}</option
+												>{/each}</select
+										></label
+									>
+									<label class="text-sm"
+										>Nama<input
+											class={field}
+											name="namaDokumen"
+											value={doc.nama_dokumen}
+											required
+										/></label
+									>
+									<label class="text-sm"
+										>Nomor<input
+											class={field}
+											name="noDokumen"
+											value={doc.no_dokumen}
+											required
+										/></label
+									>
+									<label class="text-sm"
+										>Revisi<input
+											class={field}
+											name="noRev"
+											type="number"
+											min="0"
+											value={doc.no_rev}
+											required
+										/></label
+									>
+									<label class="text-sm"
+										>Tanggal berlaku<input
+											class={field}
+											name="tglBerlaku"
+											type="date"
+											value={doc.tgl_berlaku ?? ''}
+										/></label
+									>
+									<label class="text-sm"
+										>Tanggal kedaluwarsa<input
+											class={field}
+											name="tglExpired"
+											type="date"
+											value={doc.tgl_expired ?? ''}
+										/></label
+									>
+									<label class="text-sm"
+										>Ganti PDF (opsional)<input
+											class={field}
+											name="pdf"
+											type="file"
+											accept="application/pdf"
+										/></label
+									>
+									<button
+										class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+										type="submit">Simpan perubahan</button
+									>
+								</form>
+							</details>
+							<form
+								method="POST"
+								action="?/delete"
+								class="mt-3"
+								onsubmit={(event) => {
+									if (!window.confirm(`Hapus dokumen ${doc.nama_dokumen}?`)) event.preventDefault();
+								}}
+							>
+								<input type="hidden" name="documentId" value={doc.id} /><button
+									class="text-sm text-destructive hover:underline"
+									type="submit">Hapus dokumen</button
+								>
 							</form>
 						</div>
-					{/each}
+					{:else}<p class="p-5 text-sm text-muted-foreground">Tidak ada dokumen.</p>{/each}
 				</div>
 				{#if legacyPageCount > 1}
 					<div class="mt-4 flex items-center justify-between gap-3">
@@ -225,5 +382,71 @@
 				{/if}
 			</div>
 		{/if}
+		<div class="mt-6 rounded-2xl border bg-card p-5 md:p-6">
+			<h2 class="font-semibold">Log aktivitas MS</h2>
+			<p class="mt-1 text-sm text-muted-foreground">
+				Riwayat upload, edit, dan hapus dokumen. Waktu ditampilkan dalam WIB.
+			</p>
+			<div class="mt-4 flex flex-wrap gap-3">
+				<input
+					class={field}
+					style="flex:1"
+					aria-label="Cari log"
+					placeholder="Cari nama / nomor dokumen / pengguna"
+					bind:value={logSearch}
+				/>
+				<select class={field} style="width:auto" aria-label="Jenis aksi" bind:value={logFilter}
+					><option value="all">Semua aksi</option><option value="upload">Upload</option><option
+						value="edit">Edit</option
+					><option value="pdf">Ganti PDF</option><option value="delete">Hapus</option></select
+				>
+			</div>
+			{#if data.logs.length}<p class="mt-2 text-xs text-muted-foreground">
+					Menampilkan {filteredLogs.length} dari {data.logs.length} aktivitas.
+				</p>{/if}
+			<div class="mt-2 max-h-96 divide-y overflow-y-auto">
+				{#each filteredLogs as log (log.id)}
+					<div class="py-3 text-sm">
+						<p class="font-medium">
+							{log.action === 'upload' ? 'Upload' : log.action === 'edit' ? 'Edit' : 'Hapus'} · {(
+								log.after ?? log.before
+							)?.nama_dokumen}
+						</p>
+						<p class="mt-1 text-xs text-muted-foreground">
+							{log.actor.name} ({log.actor.role}) · {new Intl.DateTimeFormat('id-ID', {
+								dateStyle: 'medium',
+								timeStyle: 'medium',
+								timeZone: 'Asia/Jakarta'
+							}).format(new Date(log.at))} WIB
+						</p>
+						{#if log.pdfReplaced}<p class="mt-1 text-xs text-muted-foreground">
+								File PDF diganti.
+							</p>{/if}
+						<details class="mt-2">
+							<summary class="cursor-pointer text-xs text-primary">Detail perubahan</summary>
+							<div class="mt-2 grid gap-2 sm:grid-cols-2">
+								{#each [log.before, log.after] as state, index}<div
+										class="rounded-lg bg-muted/40 p-3"
+									>
+										<p class="font-medium">{index === 0 ? 'Sebelum' : 'Sesudah'}</p>
+										{#if state}<p>{state.nama_dokumen} · {state.no_dokumen}</p>
+											<p>
+												Rev. {state.no_rev} · {state.type_doc} · Departemen #{state.departement_id}
+											</p>
+											<p>
+												Berlaku: {state.tgl_berlaku ?? '-'} · Kedaluwarsa: {state.tgl_expired ??
+													'-'}
+											</p>{:else}<p>—</p>{/if}
+									</div>{/each}
+							</div>
+						</details>
+					</div>
+				{:else}<p class="py-4 text-sm text-muted-foreground">
+						{data.logs.length
+							? 'Tidak ada aktivitas yang cocok dengan pencarian.'
+							: 'Belum ada aktivitas tercatat.'}
+					</p>{/each}
+			</div>
+		</div>
 	</div>
 </section>

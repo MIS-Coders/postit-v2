@@ -8,6 +8,7 @@ from pathlib import Path
 from langchain_core.documents import Document
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+from document_access import filter_published_documents
 
 
 COLLECTION_NAME = "sop_ik_documents_voyage"
@@ -389,7 +390,7 @@ def hybrid_search(
         # Vector retrieval tetap melayani chat jika index/migration keyword belum siap.
         logger.exception("PostgreSQL full-text retrieval failed; using vector results only")
         keyword_documents = []
-    fused_documents = _fuse_rankings(vector_documents, keyword_documents, query, limit)
+    fused_documents = _fuse_rankings(filter_published_documents(vector_documents), filter_published_documents(keyword_documents), query, limit)
     try:
         entitlement_documents = _leave_entitlement_documents(
             engine,
@@ -418,4 +419,4 @@ def hybrid_search(
             continue
         seen.add(key)
         combined_documents.append(document)
-    return combined_documents[:limit]
+    return filter_published_documents(combined_documents)[:limit]

@@ -274,7 +274,12 @@
 						oncontextmenu={blockContextMenu}
 						role="presentation"
 					>
-						<PdfCanvas src={sopFileUrl(doc.id)} {pageNo} bind:numPages class="max-w-3xl" />
+						{#key doc.id}<PdfCanvas
+								src={sopFileUrl(doc.id)}
+								bind:pageNo
+								bind:numPages
+								class="max-w-3xl"
+							/>{/key}
 
 						{#if notice}
 							<div
