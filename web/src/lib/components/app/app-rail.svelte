@@ -9,6 +9,8 @@
 	import RiFlaskLine from 'remixicon-svelte/icons/flask-line';
 	import RiLogoutBoxRLine from 'remixicon-svelte/icons/logout-box-r-line';
 	import RiTeamLine from 'remixicon-svelte/icons/team-line';
+	import RiIdCardLine from 'remixicon-svelte/icons/id-card-line';
+	import RiCommunityLine from 'remixicon-svelte/icons/community-line';
 
 	import { cn } from '$lib/utils';
 
@@ -48,6 +50,8 @@
 			? [
 					[
 						{ label: 'Data User', icon: RiTeamLine, href: '/users' },
+						{ label: 'Data Level', icon: RiIdCardLine, href: '/level' },
+						{ label: 'Data SBU', icon: RiCommunityLine, href: '/sbu'}
 					]
 				]
 			: [])
