@@ -14,7 +14,7 @@ function value(form: FormData, field: string) {
 }
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-    const access = await requireRole(locals, ['superadmin', 'ms', 'admin']);
+    const access = await requireRole(locals, ['superadmin', 'admin']);
     const search = url.searchParams.get('q')?.trim() ?? '';
     const requestedPage = Number.parseInt(url.searchParams.get('page') ?? '1', 10);
     const searchTerm = search ? `%${search.toLowerCase()}%` : undefined;
@@ -61,7 +61,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 export const actions: Actions = {
     create: async ({ request, locals, url }) => {
-        await requireRole(locals, ['ms', 'admin', 'superadmin']);
+        await requireRole(locals, ['admin', 'superadmin']);
         const form = await request.formData();
         const namaLevel = value(form, 'nama_level');
         const inputBy = locals.legacyUserId ?? 0;
@@ -87,7 +87,7 @@ export const actions: Actions = {
     },
 
     update: async ({ request, locals, url }) => {
-        await requireRole(locals, ['ms', 'admin', 'superadmin']);
+        await requireRole(locals, ['admin', 'superadmin']);
         const form = await request.formData();
         const levelId = Number.parseInt(value(form, 'levelid'), 10);
         const namaLevel = value(form, 'nama_level');
@@ -110,7 +110,7 @@ export const actions: Actions = {
     },
 
     delete: async ({ request, locals, url }) => {
-        await requireRole(locals, ['ms', 'admin', 'superadmin']);
+        await requireRole(locals, ['admin', 'superadmin']);
         const levelId = value(await request.formData(), 'levelId');
         if (!levelId) return fail(400, { error: 'Level tidak ditemukan.' })
 
