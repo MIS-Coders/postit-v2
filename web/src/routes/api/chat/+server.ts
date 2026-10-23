@@ -1,5 +1,5 @@
 // web/src/routes/api/chat/+server.ts
-import { error } from '@sveltejs/kit';
+import { error, isHttpError } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { CHAT_ENDPOINT } from '$lib/api';
 import { env } from '$env/dynamic/private';
@@ -29,8 +29,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     });
 
     if (!flaskResponse.ok) {
-        const errText = await flaskResponse.text();
-        throw error(flaskResponse.status, `Gagal terhubung ke Backend Flask: ${errText}`);
+        const errText = (await flaskResponse.text()).trim();
+        // Halaman error HTML (mis. 502 dari nginx) cukup diringkas jadi status-nya saja.
+        const detail = !errText || errText.startsWith('<')
+          ? `${flaskResponse.status} ${flaskResponse.statusText}`.trim()
+          : errText;
+        throw error(flaskResponse.status, `Gagal terhubung ke Backend Flask: ${detail}`);
     }
 
     // 4. Kembalikan stream ke Browser, ditutup dengan link ke dokumen sumbernya
@@ -50,6 +54,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     });
 
   } catch (err: any) {
-    throw error(500, err.message || 'Internal Server Error');
+    // HttpError dari error() di atas tidak punya .message, jadi teruskan apa adanya.
+    if (isHttpError(err)) throw err;
+    throw error(500, `Gagal terhubung ke Backend Flask: ${err.message || 'Internal Server Error'}`);
   }
 };

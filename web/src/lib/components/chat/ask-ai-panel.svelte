@@ -10,6 +10,7 @@
 	import RiSparkling2Fill from 'remixicon-svelte/icons/sparkling-2-fill';
 	import RiSparkling2Line from 'remixicon-svelte/icons/sparkling-2-line';
 
+	import { chatErrorMessage } from '$lib/chat-error';
 	import { ui } from '$lib/state/ui.svelte';
 	import { cn } from '$lib/utils';
 
@@ -79,7 +80,7 @@
 					documentType: ctx?.type_doc ?? null
 				})
 			});
-			if (!response.ok || !response.body) throw new Error('Gagal terhubung ke API Chatbot.');
+			if (!response.ok || !response.body) throw new Error(await chatErrorMessage(response));
 
 			const reader = response.body.getReader();
 			const decoder = new TextDecoder('utf-8');

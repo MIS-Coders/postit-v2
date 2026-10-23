@@ -13,6 +13,7 @@
 	import RiShoppingCart2Line from 'remixicon-svelte/icons/shopping-cart-2-line';
 	import RiStopFill from 'remixicon-svelte/icons/stop-fill';
 
+	import { chatErrorMessage } from '$lib/chat-error';
 	import { splitSources } from '$lib/chat-sources';
 	import ThemeToggle from '$lib/components/app/theme-toggle.svelte';
 	import ChatMascot from '$lib/components/chat/chat-mascot.svelte';
@@ -115,7 +116,7 @@
 				body: JSON.stringify({ query: question, department: department || null, mode: chatMode }),
 				signal: controller.signal
 			});
-			if (!response.ok || !response.body) throw new Error('Gagal terhubung ke API Chatbot.');
+			if (!response.ok || !response.body) throw new Error(await chatErrorMessage(response));
 
 			const reader = response.body.getReader();
 			const decoder = new TextDecoder('utf-8');
