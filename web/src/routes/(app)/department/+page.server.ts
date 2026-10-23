@@ -43,6 +43,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			d.nama_departement AS nama_departement,
 			d.userid_head AS userid_head,
 			d.userid_spi AS userid_spi,
+			d.void_status AS void_status,
 			u_head.nama AS nama_gm,
 			u_spi.nama AS nama_spi
 		FROM public.departement d
@@ -76,7 +77,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			userid_head: row.userid_head == null ? null : Number(row.userid_head),
 			userid_spi: row.userid_spi == null ? null : Number(row.userid_spi),
 			nama_gm: row.nama_gm ? String(row.nama_gm) : '-',
-			nama_spi: row.nama_spi ? String(row.nama_spi) : '-'
+			nama_spi: row.nama_spi ? String(row.nama_spi) : '-',
+			voidStatus: Number(row.void_status ?? 0)
 		})),
 		pagination: { page, pageSize, total, totalPages }
 	};
@@ -122,35 +124,75 @@ export const actions: Actions = {
 
 	update: async ({ request, locals, url }) => {
 		await requireRole(locals, ['admin', 'superadmin']);
+
 		const form = await request.formData();
-		const departmentId = Number.parseInt(value(form, 'departmentId'), 10);
+
+		const departmentId = Number(value(form, 'departmentId'));
 		const namaDepartement = value(form, 'nama_departement');
-		const useridHead = Number.parseInt(value(form, 'userid_head'), 10);
-		const useridSpi = Number.parseInt(value(form, 'userid_spi'), 10);
+		const useridHead = Number(value(form, 'userid_head'));
+		const useridSpi = Number(value(form, 'userid_spi'));
+		const rawStatus = value(form, 'void_status');
 
 		if (
-			!Number.isInteger(departmentId) ||
+			!Number.isSafeInteger(departmentId) ||
+			departmentId <= 0 ||
 			!namaDepartement ||
-			!Number.isInteger(useridHead) ||
-			!Number.isInteger(useridSpi)
+			!Number.isSafeInteger(useridHead) ||
+			useridHead <= 0 ||
+			!Number.isSafeInteger(useridSpi) ||
+			useridSpi <= 0 ||
+			(rawStatus !== '0' && rawStatus !== '1')
 		) {
 			return fail(400, { error: 'Data departemen tidak valid.' });
 		}
 
-		const [headUser] = await db.execute(
-			sql`SELECT 1 FROM public."user" WHERE legacy_id = ${useridHead} LIMIT 1`
-		);
-		const [spiUser] = await db.execute(
-			sql`SELECT 1 FROM public."user" WHERE legacy_id = ${useridSpi} LIMIT 1`
-		);
-		if (!headUser) return fail(404, { error: 'GM yang dipilih tidak ditemukan.' });
-		if (!spiUser) return fail(404, { error: 'SPI yang dipilih tidak ditemukan.' });
-
-		await db.execute(sql`
-			UPDATE public.departement
-			SET nama_departement = ${namaDepartement}, userid_head = ${useridHead}, userid_spi = ${useridSpi}
-			WHERE id = ${departmentId}
+		const [headUser] = await db.execute(sql`
+			SELECT 1
+			FROM public."user"
+			WHERE legacy_id = ${useridHead}
+			LIMIT 1
 		`);
+
+		const [spiUser] = await db.execute(sql`
+			SELECT 1
+			FROM public."user"
+			WHERE legacy_id = ${useridSpi}
+			LIMIT 1
+		`);
+
+		if (!headUser) {
+			return fail(404, { error: 'GM yang dipilih tidak ditemukan.' });
+		}
+
+		if (!spiUser) {
+			return fail(404, { error: 'SPI yang dipilih tidak ditemukan.' });
+		}
+
+		const status = Number(rawStatus);
+		const userId = locals.legacyUserId ?? 0;
+
+		const result = await db.execute(sql`
+			UPDATE public.departement
+			SET
+				nama_departement = ${namaDepartement},
+				userid_head = ${useridHead},
+				userid_spi = ${useridSpi},
+				void_status = ${status},
+				void_by_userid = CASE
+					WHEN ${status} = 1 THEN ${userId}
+					ELSE void_by_userid
+				END,
+				void_date = CASE
+					WHEN ${status} = 1 THEN COALESCE(void_date, CURRENT_TIMESTAMP)
+					ELSE NULL
+				END
+			WHERE id = ${departmentId}
+			RETURNING id
+		`);
+
+		if (result.length === 0) {
+			return fail(404, { error: 'Departemen tidak ditemukan.' });
+		}
 
 		throw redirect(303, `${url.pathname}${url.search}`);
 	}

@@ -135,6 +135,18 @@
 									{/each}
 								</select>
 							</label>
+							<label class="text-sm font-medium">
+								Status
+								<select
+									class={field}
+									name="void_status"
+									value={String(department.voidStatus)}
+									required
+								>
+									<option value="0">Aktif</option>
+									<option value="1">Nonaktif</option>
+								</select>
+							</label>
 							<button
 								class="rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
 								type="submit">Simpan</button
