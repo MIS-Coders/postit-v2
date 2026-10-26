@@ -1,7 +1,7 @@
 <script lang="ts">
 	let { data, form } = $props();
 
-	let resetPasswordFor = $state<string | null>(null);
+	let openRow = $state<{ id: string; panel: 'edit' | 'reset' } | null>(null);
 
 	const field =
 		'mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary';
@@ -16,6 +16,24 @@
 
 	function formattedDate(date: Date | string) {
 		return new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(new Date(date));
+	}
+
+	function toggleRow(id: string, panel: 'edit' | 'reset') {
+		openRow = openRow?.id === id && openRow.panel === panel ? null : { id, panel };
+	}
+
+	function statusBadge(status: string | null | undefined) {
+		if (status === 'inactive')
+			return { label: 'Nonaktif', class: 'bg-muted text-muted-foreground border' };
+		if (status === 'resigned')
+			return {
+				label: 'Resign',
+				class: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+			};
+		return {
+			label: 'Aktif',
+			class: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+		};
 	}
 
 	function pageHref(page: number) {
@@ -175,186 +193,233 @@
 						>{/if}
 				</form>
 			</div>
-			<div class="divide-y">
-				{#each data.users as account (account.id)}
-					<div class="p-5 md:px-6">
-						<form
-							method="POST"
-							action="?/update"
-							class="grid gap-3 md:grid-cols-2 md:items-end xl:grid-cols-5"
-						>
-							<input type="hidden" name="userId" value={account.id} />
-							<label class="text-sm font-medium"
-								>NIK<input class={field} name="nik" value={account.nik} required /></label
-							>
-							<label class="text-sm font-medium"
-								>Nama<input class={field} name="name" value={account.name} required /></label
-							>
-							<label class="text-sm font-medium"
-								>Username<input
-									class={field}
-									name="username"
-									value={account.username ?? ''}
-									required
-								/></label
-							>
-							<label class="text-sm font-medium"
-								>SBU
-								<select class={field} name="sbuId" value={account.sbuId ?? ''} required>
-									<option value="">Pilih SBU</option>
-									{#each data.sbus as sbu}<option value={sbu.id}>{sbu.namaSbu}</option>{/each}
-								</select>
-							</label>
-							<label class="text-sm font-medium"
-								>Departement
-								<select
-									class={field}
-									name="departementId"
-									value={account.departmentId ?? ''}
-									required
-								>
-									<option value="">Pilih departement</option>
-									{#each data.departments as department}<option value={department.id}
-											>{department.namaDepartement}</option
-										>{/each}
-								</select>
-							</label>
-							<label class="text-sm font-medium"
-								>Jabatan
-								<select class={field} name="levelId" value={account.levelId ?? ''} required>
-									<option value="">Pilih jabatan</option>
-									{#each data.levels as level}<option value={level.id}>{level.namaLevel}</option
-										>{/each}
-								</select>
-							</label>
-							<label class="text-sm font-medium"
-								>Email<input
-									class={`${field} text-muted-foreground`}
-									value={account.email}
-									disabled
-								/></label
-							>
-							<label class="text-sm font-medium"
-								>Role
-								{#if account.id === data.userId}
-									<input name="role" type="hidden" value={account.role} />
-									<select class={field} value={account.role} disabled>
-										{#each data.assignableRoles as role}<option value={role}>{role}</option>{/each}
-									</select>
-								{:else}
-									<select class={field} name="role" value={account.role}>
-										{#each data.assignableRoles as role}<option value={role}>{role}</option>{/each}
-									</select>
-								{/if}
-							</label>
-							<label class="text-sm font-medium"
-								>Status
-								<select
-									class={field}
-									name="accountStatus"
-									value={account.accountStatus ?? 'active'}
-								>
-									<option value="active">Aktif</option><option value="inactive">Nonaktif</option
-									><option value="resigned">Resign</option>
-								</select>
-							</label>
-							<button
-								class="rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
-								type="submit">Simpan</button
-							>
-						</form>
-						<div class="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-							<span>Dibuat {formattedDate(account.createdAt)}</span>
-							{#if account.id !== data.userId}
-								<div class="flex items-center gap-3">
-									<!-- <form method="POST" action="?/toggleStatus" class="flex items-center gap-2">
-										<input type="hidden" name="userId" value={account.id} />
-										<input type="hidden" name="status" value={account.voidStatus === 0 ? '0' : '1'} />
-										<label class="inline-flex cursor-pointer items-center gap-2">
-											<span class="font-medium text-muted-foreground"
-												>{account.voidStatus === 0 ? 'Aktif' : 'Non aktif'}</span
-											>
-											<input
-												type="checkbox"
-												name="isActive"
-												checked={account.voidStatus === 0}
-												class="peer sr-only"
-												onchange={(event) => {
-													const target = event.currentTarget;
-													const form = target.form;
-													const hiddenStatus = form?.querySelector(
-														'input[name="status"]'
-													) as HTMLInputElement | null;
-													if (!form || !hiddenStatus) return;
-													hiddenStatus.value = target.checked ? '0' : '1';
-													form.requestSubmit();
-												}}
-											/>
-											<span
-												class="relative h-6 w-11 rounded-full bg-muted-foreground/30 transition peer-checked:bg-emerald-500 after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition after:content-[''] peer-checked:after:translate-x-5"
-											></span>
-										</label>
-									</form> -->
-									<button
-										class="font-medium text-foreground transition hover:underline"
-										type="button"
-										aria-expanded={resetPasswordFor === account.id}
-										onclick={() =>
-											(resetPasswordFor = resetPasswordFor === account.id ? null : account.id)}
-										>Reset password</button
+			<div class="overflow-x-auto bg-card">
+				<table class="w-full min-w-[960px] bg-card text-left text-sm">
+					<thead class="border-b bg-muted text-xs text-muted-foreground">
+						<tr>
+							<th class="px-5 py-3 font-medium md:pl-6">Pengguna</th>
+							<th class="px-3 py-3 font-medium">NIK</th>
+							<th class="px-3 py-3 font-medium">SBU</th>
+							<th class="px-3 py-3 font-medium">Departement</th>
+							<th class="px-3 py-3 font-medium">Jabatan</th>
+							<th class="px-3 py-3 font-medium">Role</th>
+							<th class="px-3 py-3 font-medium">Status</th>
+							<th class="px-3 py-3 font-medium">Dibuat</th>
+							<th class="px-5 py-3 text-right font-medium md:pr-6">Aksi</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y">
+						{#each data.users as account (account.id)}
+							{@const status = statusBadge(account.accountStatus)}
+							{@const isOpen = openRow?.id === account.id}
+							<tr class={['bg-card transition hover:bg-muted', isOpen && 'bg-muted']}>
+								<td class="px-5 py-3 md:pl-6">
+									<p class="font-medium">{account.name}</p>
+									<p class="text-xs text-muted-foreground">
+										{account.username ?? '-'} · {account.email}
+									</p>
+								</td>
+								<td class="px-3 py-3 tabular-nums">{account.nik ?? '-'}</td>
+								<td class="px-3 py-3">{account.sbu ?? '-'}</td>
+								<td class="px-3 py-3">{account.department ?? '-'}</td>
+								<td class="px-3 py-3">{account.level ?? '-'}</td>
+								<td class="px-3 py-3">
+									<span class="rounded-md border bg-background px-2 py-0.5 text-xs font-medium"
+										>{account.role}</span
 									>
-									<form method="POST" action="?/delete">
-										<input type="hidden" name="userId" value={account.id} />
+								</td>
+								<td class="px-3 py-3">
+									<span class={['rounded-md px-2 py-0.5 text-xs font-medium', status.class]}
+										>{status.label}</span
+									>
+								</td>
+								<td class="px-3 py-3 whitespace-nowrap text-muted-foreground"
+									>{formattedDate(account.createdAt)}</td
+								>
+								<td class="px-5 py-3 md:pr-6">
+									<div class="flex items-center justify-end gap-3 text-xs whitespace-nowrap">
 										<button
-											class="font-medium text-destructive transition hover:underline"
-											type="submit">Hapus pengguna</button
+											class="font-medium text-foreground transition hover:underline"
+											type="button"
+											aria-expanded={isOpen && openRow?.panel === 'edit'}
+											onclick={() => toggleRow(account.id, 'edit')}>Ubah</button
 										>
-									</form>
-								</div>
-							{:else}
-								<span>Akun Anda</span>
+										{#if account.id !== data.userId}
+											<button
+												class="font-medium text-foreground transition hover:underline"
+												type="button"
+												aria-expanded={isOpen && openRow?.panel === 'reset'}
+												onclick={() => toggleRow(account.id, 'reset')}>Reset password</button
+											>
+										{:else}
+											<span class="text-muted-foreground">Akun Anda</span>
+										{/if}
+									</div>
+								</td>
+							</tr>
+							{#if isOpen && openRow?.panel === 'edit'}
+								<tr class="bg-muted">
+									<td colspan="9" class="px-5 pt-1 pb-5 md:px-6">
+										<form
+											method="POST"
+											action="?/update"
+											class="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-2 md:items-end xl:grid-cols-5"
+										>
+											<input type="hidden" name="userId" value={account.id} />
+											<label class="text-sm font-medium"
+												>NIK<input class={field} name="nik" value={account.nik} required /></label
+											>
+											<label class="text-sm font-medium"
+												>Nama<input class={field} name="name" value={account.name} required /></label
+											>
+											<label class="text-sm font-medium"
+												>Username<input
+													class={field}
+													name="username"
+													value={account.username ?? ''}
+													required
+												/></label
+											>
+											<label class="text-sm font-medium"
+												>SBU
+												<select class={field} name="sbuId" value={account.sbuId ?? ''} required>
+													<option value="">Pilih SBU</option>
+													{#each data.sbus as sbu}<option value={sbu.id}>{sbu.namaSbu}</option
+														>{/each}
+												</select>
+											</label>
+											<label class="text-sm font-medium"
+												>Departement
+												<select
+													class={field}
+													name="departementId"
+													value={account.departmentId ?? ''}
+													required
+												>
+													<option value="">Pilih departement</option>
+													{#each data.departments as department}<option value={department.id}
+															>{department.namaDepartement}</option
+														>{/each}
+												</select>
+											</label>
+											<label class="text-sm font-medium"
+												>Jabatan
+												<select class={field} name="levelId" value={account.levelId ?? ''} required>
+													<option value="">Pilih jabatan</option>
+													{#each data.levels as level}<option value={level.id}
+															>{level.namaLevel}</option
+														>{/each}
+												</select>
+											</label>
+											<label class="text-sm font-medium"
+												>Email<input
+													class={`${field} text-muted-foreground`}
+													value={account.email}
+													disabled
+												/></label
+											>
+											<label class="text-sm font-medium"
+												>Role
+												{#if account.id === data.userId}
+													<input name="role" type="hidden" value={account.role} />
+													<select class={field} value={account.role} disabled>
+														{#each data.assignableRoles as role}<option value={role}>{role}</option
+															>{/each}
+													</select>
+												{:else}
+													<select class={field} name="role" value={account.role}>
+														{#each data.assignableRoles as role}<option value={role}>{role}</option
+															>{/each}
+													</select>
+												{/if}
+											</label>
+											<label class="text-sm font-medium"
+												>Status
+												<select
+													class={field}
+													name="accountStatus"
+													value={account.accountStatus ?? 'active'}
+												>
+													<option value="active">Aktif</option><option value="inactive"
+														>Nonaktif</option
+													><option value="resigned">Resign</option>
+												</select>
+											</label>
+											<div class="flex items-center gap-2 md:col-span-2 xl:col-span-5">
+												<button
+													class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+													type="submit">Simpan</button
+												>
+												<button
+													class="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+													type="button"
+													onclick={() => (openRow = null)}>Batal</button
+												>
+												{#if account.id !== data.userId}
+													<button
+														class="ml-auto rounded-lg px-4 py-2 text-sm font-medium text-destructive transition hover:underline"
+														type="submit"
+														formaction="?/delete"
+														formnovalidate
+														onclick={(event) => {
+															if (!confirm(`Yakin ingin menghapus pengguna "${account.name}"?`)) {
+																event.preventDefault();
+															}
+														}}>Hapus pengguna</button
+													>
+												{/if}
+											</div>
+										</form>
+									</td>
+								</tr>
+							{:else if isOpen && openRow?.panel === 'reset'}
+								<tr class="bg-muted">
+									<td colspan="9" class="px-5 pt-1 pb-5 md:px-6">
+										<form
+											method="POST"
+											action="?/resetPassword"
+											class="flex flex-col gap-3 rounded-xl border bg-card p-4 md:flex-row md:items-end"
+										>
+											<input type="hidden" name="userId" value={account.id} />
+											<label class="text-sm font-medium md:w-80"
+												>Password sementara untuk {account.name}<input
+													class={field}
+													name="password"
+													type="password"
+													minlength="8"
+													autocomplete="new-password"
+													required
+												/></label
+											>
+											<p class="text-xs text-muted-foreground md:flex-1">
+												Minimal 8 karakter, huruf besar, huruf kecil, dan karakter spesial. Sesi
+												pengguna akan diakhiri dan ia wajib membuat password baru saat login
+												berikutnya.
+											</p>
+											<div class="flex gap-2">
+												<button
+													class="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+													type="button"
+													onclick={() => (openRow = null)}>Batal</button
+												>
+												<button
+													class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+													type="submit">Reset password</button
+												>
+											</div>
+										</form>
+									</td>
+								</tr>
 							{/if}
-						</div>
-						{#if resetPasswordFor === account.id}
-							<form
-								method="POST"
-								action="?/resetPassword"
-								class="mt-3 flex flex-col gap-3 rounded-xl border bg-muted/40 p-4 md:flex-row md:items-end"
-							>
-								<input type="hidden" name="userId" value={account.id} />
-								<label class="text-sm font-medium md:w-80"
-									>Password sementara untuk {account.name}<input
-										class={field}
-										name="password"
-										type="password"
-										minlength="8"
-										autocomplete="new-password"
-										required
-									/></label
-								>
-								<p class="text-xs text-muted-foreground md:flex-1">
-									Minimal 8 karakter, huruf besar, huruf kecil, dan karakter spesial. Sesi pengguna
-									akan diakhiri dan ia wajib membuat password baru saat login berikutnya.
-								</p>
-								<div class="flex gap-2">
-									<button
-										class="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
-										type="button"
-										onclick={() => (resetPasswordFor = null)}>Batal</button
-									>
-									<button
-										class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
-										type="submit">Reset password</button
-									>
-								</div>
-							</form>
-						{/if}
-					</div>
-				{:else}
-					<p class="px-5 py-10 text-center text-sm text-muted-foreground">
-						Tidak ada pengguna yang cocok.
-					</p>
-				{/each}
+						{:else}
+							<tr class="bg-card">
+								<td colspan="9" class="px-5 py-10 text-center text-sm text-muted-foreground">
+									Tidak ada pengguna yang cocok.
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
 			</div>
 			{#if data.pagination.totalPages > 1}
 				<nav
