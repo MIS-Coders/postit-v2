@@ -21,10 +21,20 @@ describe('continuous PDF viewer', () => {
 		await search.fill('approval');
 		await expect
 			.element(page.getByRole('status'))
-			.toHaveTextContent('1 / 2 halaman ditemukan · Halaman 2');
+			.toHaveTextContent('1 / 2 hasil ditemukan · Halaman 2');
+		const highlight = (pageNo: number) =>
+			document.querySelector<HTMLElement>(`[data-pdf-page="${pageNo}"] [data-pdf-highlight]`)
+				?.dataset.pdfHighlight;
+		await expect.poll(() => highlight(2)).toBe('active');
+		expect(highlight(4)).toBe('');
 		await page.getByRole('button', { name: 'Hasil berikutnya' }).click();
-		await expect.element(page.getByRole('status')).toHaveTextContent('Halaman 4');
+		await expect
+			.element(page.getByRole('status'))
+			.toHaveTextContent('2 / 2 hasil ditemukan · Halaman 4');
+		await expect.poll(() => highlight(4)).toBe('active');
+		expect(highlight(2)).toBe('');
 		await search.fill('missing-word');
 		await expect.element(page.getByRole('status')).toHaveTextContent('Teks tidak ditemukan');
+		expect(document.querySelector('[data-pdf-highlight]')).toBeNull();
 	});
 });

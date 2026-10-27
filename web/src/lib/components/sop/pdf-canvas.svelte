@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import type { PDFDocumentProxy } from 'pdfjs-dist/legacy/build/pdf.mjs';
-	import { findPdfPage } from '$lib/pdf-search';
+	import {
+		findPdfMatches,
+		type PdfHighlightBox,
+		type PdfMeasure,
+		type PdfTextItem,
+		type PdfViewport
+	} from '$lib/pdf-search';
 	import PdfPage from './pdf-page.svelte';
 
 	interface Props {
@@ -19,9 +25,32 @@
 	let searching = $state(false);
 	let searchError = $state(false);
 	let searched = $state(false);
-	let matches = $state<Array<{ page: number; count: number; snippet: string }>>([]);
+	// satu entri per kemunculan kata, berurutan dari halaman pertama
+	let matches = $state<Array<{ page: number; boxes: PdfHighlightBox[]; snippet: string }>>([]);
 	let resultIndex = $state(0);
-	const texts = new Map<number, string>();
+	const contents = new Map<
+		number,
+		{ items: PdfTextItem[]; viewport: PdfViewport; measure: PdfMeasure }
+	>();
+	let measureContext: CanvasRenderingContext2D | null | undefined;
+	// ukur lebar teks dengan keluarga font yang dilaporkan pdf.js (mis. sans-serif) agar highlight pas
+	function measureWith(styles: Record<string, { fontFamily: string }>): PdfMeasure {
+		return (text, item) => {
+			measureContext ??= document.createElement('canvas').getContext('2d');
+			if (!measureContext) return 0;
+			measureContext.font = `100px ${styles[item.fontName ?? '']?.fontFamily ?? 'sans-serif'}`;
+			return measureContext.measureText(text).width;
+		};
+	}
+	const highlightsByPage = $derived.by(() => {
+		const byPage = new Map<number, Array<{ boxes: PdfHighlightBox[]; active: boolean }>>();
+		matches.forEach((match, index) => {
+			const list = byPage.get(match.page) ?? [];
+			list.push({ boxes: match.boxes, active: index === resultIndex });
+			byPage.set(match.page, list);
+		});
+		return byPage;
+	});
 
 	$effect(() => {
 		const url = src;
@@ -30,7 +59,7 @@
 		pdf = null;
 		numPages = 0;
 		status = 'loading';
-		texts.clear();
+		contents.clear();
 		(async () => {
 			const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
 			const worker = await import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url');
@@ -54,12 +83,24 @@
 		};
 	});
 
-	async function jump(target: number) {
+	// offset: posisi (0–1) di dalam halaman yang harus terlihat, mis. letak kata yang ditemukan
+	async function jump(target: number, offset?: number) {
 		await tick();
 		const element = scroller?.querySelector<HTMLElement>(`[data-pdf-page="${target}"]`);
-		if (element && scroller)
-			scroller.scrollTop +=
-				element.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 12;
+		if (!element || !scroller) return;
+		const page = element.getBoundingClientRect();
+		const view = scroller.getBoundingClientRect();
+		scroller.scrollTop +=
+			offset === undefined
+				? page.top - view.top - 12
+				: page.top + offset * page.height - view.top - view.height / 3;
+	}
+	function showMatch(index: number) {
+		const match = matches[index];
+		// visiblePage diisi dulu supaya effect pageNo tidak menimpa scroll ke posisi kata
+		visiblePage = match.page;
+		pageNo = match.page;
+		void jump(match.page, match.boxes[0]?.top);
 	}
 	$effect(() => {
 		const target = pageNo;
@@ -87,8 +128,7 @@
 	function selectResult(index: number) {
 		if (!matches.length) return;
 		resultIndex = (index + matches.length) % matches.length;
-		pageNo = matches[resultIndex].page;
-		void jump(pageNo);
+		showMatch(resultIndex);
 	}
 	$effect(() => {
 		const doc = pdf;
@@ -105,23 +145,30 @@
 			try {
 				for (let page = 1; page <= doc.numPages; page++) {
 					if (cancelled) return;
-					let text = texts.get(page);
-					if (text === undefined) {
-						const content = await (await doc.getPage(page)).getTextContent();
+					let content = contents.get(page);
+					if (!content) {
+						const pdfPage = await doc.getPage(page);
+						const text = await pdfPage.getTextContent();
 						if (cancelled) return;
-						text = content.items.map((item) => ('str' in item ? item.str : '')).join(' ');
-						texts.set(page, text);
+						content = {
+							items: text.items.filter((item) => 'str' in item),
+							viewport: pdfPage.getViewport({ scale: 1 }),
+							measure: measureWith(text.styles)
+						};
+						contents.set(page, content);
 					}
-					const match = findPdfPage(text, term);
-					if (match) found.push({ page, ...match });
+					for (const match of findPdfMatches(
+						content.items,
+						term,
+						content.viewport,
+						content.measure
+					))
+						found.push({ page, ...match });
 				}
 				if (!cancelled) {
 					matches = found;
 					searched = true;
-					if (found.length) {
-						pageNo = found[0].page;
-						void jump(pageNo);
-					}
+					if (found.length) showMatch(0);
 				}
 			} catch {
 				if (!cancelled) searchError = true;
@@ -173,7 +220,7 @@
 					: searchError
 						? 'Pencarian gagal. Coba kembali.'
 						: matches.length
-							? `${resultIndex + 1} / ${matches.length} halaman ditemukan · Halaman ${matches[resultIndex].page}`
+							? `${resultIndex + 1} / ${matches.length} hasil ditemukan · Halaman ${matches[resultIndex].page}`
 							: searched
 								? 'Teks tidak ditemukan. PDF hasil scan memerlukan OCR.'
 								: ''}
@@ -198,6 +245,7 @@
 					{pdf}
 					pageNo={number}
 					root={scroller}
+					highlights={highlightsByPage.get(number)}
 				/>{/each}
 		{:else}<p class="p-8 text-center text-sm text-muted-foreground" role="status">
 				Memuat PDF…
