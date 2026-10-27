@@ -9,8 +9,19 @@ import { eq } from 'drizzle-orm';
 import { APIError } from 'better-auth/api';
 import { canLogin } from '$lib/password-policy';
 
+const authOrigins = (env.BETTER_AUTH_TRUSTED_ORIGINS || env.ORIGIN || 'http://localhost:5173')
+	.split(',')
+	.map((origin) => origin.trim())
+	.filter(Boolean);
+const authHosts = [...new Set(authOrigins.map((origin) => new URL(origin).host))];
+
 export const auth = betterAuth({
-	baseURL: env.ORIGIN,
+	baseURL: {
+		allowedHosts: authHosts,
+		fallback: authOrigins[0],
+		protocol: authOrigins.some((origin) => origin.startsWith('http://')) ? 'http' : 'https'
+	},
+	trustedOrigins: authOrigins,
 	secret: env.BETTER_AUTH_SECRET,
 	database: drizzleAdapter(db, { provider: 'pg' }),
 	emailAndPassword: { enabled: true, disableSignUp: true },

@@ -61,7 +61,9 @@ services:
       # folder PDF SOP + sop-data.json; SOP_STORAGE_DIR=../storage/sop -> /storage/sop
       - ./storage:/storage
     environment:
-      - ORIGIN=${ORIGIN}
+      # Resolve request origins dynamically so both production domains work.
+      - PROTOCOL_HEADER=X-Forwarded-Proto
+      - BETTER_AUTH_TRUSTED_ORIGINS=${BETTER_AUTH_TRUSTED_ORIGINS:-https://sop.mahkotagroup.com,https://dev.sop.mahkotagroup.com}
       - PUBLIC_API_URL=${PUBLIC_API_URL}
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
@@ -72,7 +74,7 @@ services:
       - BODY_SIZE_LIMIT=30M
       - APP_SECRET_TOKEN=${APP_SECRET_TOKEN} # Bearer token untuk web container -> api container (localhost:3018)
       - EMBED_API_URL=${EMBED_API_URL:-http://api:5000}
-      # - ORIGIN=${ORIGIN:-https://postit.mahkotagroup.com}
+      # - BETTER_AUTH_TRUSTED_ORIGINS=https://sop.mahkotagroup.com,https://dev.sop.mahkotagroup.com
       # - PUBLIC_API_URL=${PUBLIC_API_URL:-https://postit-ai.mahkotagroup.com}
       # - DATABASE_URL=postgres://${POSTGRES_USER:-rag_user}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-rag_db}
       # - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
