@@ -60,6 +60,15 @@
 					Nama SBU
 					<input class={field} name="nama_sbu" placeholder="" required />
 				</label>
+				<label class="text-sm font-medium">
+					GM SBU
+					<select class={field} name="gmsbu_id" required>
+						<option value="">Pilih GM</option>
+						{#each data.users as user}<option value={user.legacyId}
+								>{user.name}</option
+							>{/each}
+					</select>
+				</label>
 			</div>
 			<button
 				class="mt-5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
@@ -112,6 +121,14 @@
 									value={sbu.nama_sbu}
 									required
 								/>
+							</label>
+							<label class="text-sm font-medium">
+								GM SBU
+								<select class={field} name="gmsbu_id" value={sbu.userid_sbu ?? ''} required>
+									<option value="">Pilih GM</option>
+									{#each data.users as user}<option value={user.legacyId}>{user.name}</option
+										>{/each}
+								</select>
 							</label>
 							<button
 								class="rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
