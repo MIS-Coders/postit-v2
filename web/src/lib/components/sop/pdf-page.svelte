@@ -1,7 +1,17 @@
 <script lang="ts">
 	import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist/legacy/build/pdf.mjs';
-	let { pdf, pageNo, root }: { pdf: PDFDocumentProxy; pageNo: number; root: HTMLElement | null } =
-		$props();
+	import type { PdfHighlightBox } from '$lib/pdf-search';
+	let {
+		pdf,
+		pageNo,
+		root,
+		highlights = []
+	}: {
+		pdf: PDFDocumentProxy;
+		pageNo: number;
+		root: HTMLElement | null;
+		highlights?: Array<{ boxes: PdfHighlightBox[]; active: boolean }>;
+	} = $props();
 	let host = $state<HTMLDivElement>();
 	let canvas = $state<HTMLCanvasElement>();
 	let visible = $state(false);
@@ -58,6 +68,20 @@
 	aria-label={`Halaman ${pageNo}`}
 >
 	{#if visible}<canvas bind:this={canvas} class="block w-full" draggable="false"></canvas>{/if}
+	<!-- highlight hasil pencarian; hanya lapisan warna, teks PDF tetap tidak bisa diseleksi -->
+	{#each highlights as match, index (index)}
+		{#each match.boxes as box, boxIndex (boxIndex)}<span
+				class={[
+					'pointer-events-none absolute rounded-[2px] mix-blend-multiply',
+					match.active ? 'bg-orange-400/70 ring-2 ring-orange-500' : 'bg-yellow-300/70'
+				]}
+				data-pdf-highlight={match.active ? 'active' : ''}
+				style:left={`${box.left * 100}%`}
+				style:top={`${box.top * 100}%`}
+				style:width={`${box.width * 100}%`}
+				style:height={`${box.height * 100}%`}
+			></span>{/each}
+	{/each}
 	{#if error}<p class="absolute inset-0 flex items-center justify-center p-5 text-sm text-red-700">
 			Halaman gagal dimuat. Coba buka dokumen kembali.
 		</p>{/if}
