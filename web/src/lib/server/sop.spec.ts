@@ -18,7 +18,13 @@ vi.mock('$lib/server/db', () => ({
 		}
 	}
 }));
+import { jakartaDate } from '$lib/document-status';
 import {
+	cancelSopRevision,
+	listDocumentSeries,
+	resolveCurrentDocument,
+	scheduleSopHide,
+	scheduleSopRevision,
 	createSopDocument,
 	updateSopDocument,
 	deleteSopDocument,
@@ -34,7 +40,6 @@ const input = {
 	noDokumen: 'CHECK-1',
 	noRev: 0,
 	tglBerlaku: null,
-	tglExpired: null,
 	filename: 'test.pdf',
 	pdf: new TextEncoder().encode('%PDF-fixture')
 };
@@ -91,5 +96,84 @@ describe('SOP persistence and audit', () => {
 		expect(stored.audit).toBeUndefined();
 		// A rejected mutation also releases its filesystem lock.
 		expect((await createSopDocument(input, actor)).id).toBe(1);
+	});
+});
+describe('scheduled revisions and hiding', () => {
+	it('queues revisions behind the latest version and relinks on cancel', async () => {
+		const doc = await createSopDocument(input, actor);
+		const first = await scheduleSopRevision(
+			doc.id,
+			{ ...input, noRev: 1, tglBerlaku: '2099-01-01' },
+			actor
+		);
+		const second = await scheduleSopRevision(
+			doc.id,
+			{ ...input, noRev: 2, tglBerlaku: '2099-02-01' },
+			actor
+		);
+		expect(second.replaces_id).toBe(first.id);
+		await expect(
+			scheduleSopRevision(doc.id, { ...input, tglBerlaku: '2099-01-15' }, actor)
+		).rejects.toThrow('setelah');
+		await expect(scheduleSopHide(doc.id, '2099-03-01', actor)).rejects.toThrow('revisi');
+
+		expect((await listSop('READ')).docs.map((d) => d.id)).toEqual([doc.id]);
+		const [series] = (await listDocumentSeries()).series;
+		expect(series.current.id).toBe(doc.id);
+		expect(series.versions.map((v) => [v.no_rev, v.status, v.tgl_hide])).toEqual([
+			[0, 'active', '2099-01-01'],
+			[1, 'waiting', '2099-02-01'],
+			[2, 'waiting', null]
+		]);
+
+		await cancelSopRevision(first.id, actor);
+		const [relinked] = (await listDocumentSeries()).series;
+		expect(relinked.versions.map((v) => [v.id, v.tgl_hide, v.replaces_id])).toEqual([
+			[doc.id, '2099-02-01', null],
+			[second.id, null, doc.id]
+		]);
+		await expect(cancelSopRevision(doc.id, actor)).rejects.toThrow('belum berlaku');
+		expect(listDocumentLogs().map((log) => log.action)).toEqual([
+			'cancel_revision',
+			'revision',
+			'revision',
+			'upload'
+		]);
+	});
+	it('switches to a revision on its effective date and redirects old links', async () => {
+		const doc = await createSopDocument(input, actor);
+		const revision = await scheduleSopRevision(
+			doc.id,
+			{ ...input, noRev: 1, tglBerlaku: jakartaDate() },
+			actor
+		);
+		expect((await listSop('READ')).docs.map((d) => d.id)).toEqual([revision.id]);
+		expect(resolveCurrentDocument(doc.id)?.id).toBe(revision.id);
+		expect(getSopFilePath(doc.id)).toBeNull();
+		expect(getSopFilePath(doc.id, true)).not.toBeNull();
+		const [series] = (await listDocumentSeries()).series;
+		expect(series.current.id).toBe(revision.id);
+		expect(series.versions.map((v) => v.status)).toEqual(['hidden', 'active']);
+
+		await deleteSopDocument(revision.id, actor);
+		expect((await listDocumentSeries()).series).toEqual([]);
+	});
+	it('hides on schedule without deleting and can be undone', async () => {
+		const doc = await createSopDocument(input, actor);
+		await scheduleSopHide(doc.id, '2099-01-01', actor);
+		expect((await listSop('READ')).docs.length).toBe(1);
+		await expect(
+			scheduleSopRevision(doc.id, { ...input, tglBerlaku: '2098-01-01' }, actor)
+		).rejects.toThrow('disembunyikan');
+		await expect(scheduleSopHide(doc.id, '2000-01-01', actor)).rejects.toThrow('hari ini');
+
+		await scheduleSopHide(doc.id, jakartaDate(), actor);
+		expect((await listSop('READ', { includeWaiting: true })).docs).toEqual([]);
+		expect(resolveCurrentDocument(doc.id)).toBeNull();
+		expect((await listDocumentSeries()).series[0].current.status).toBe('hidden');
+
+		await scheduleSopHide(doc.id, null, actor);
+		expect((await listSop('READ')).docs[0].tgl_hide).toBeNull();
+		expect(listDocumentLogs()[0].action).toBe('unhide');
 	});
 });

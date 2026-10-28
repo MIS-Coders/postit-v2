@@ -12,12 +12,14 @@
 	import RiIdCardLine from 'remixicon-svelte/icons/id-card-line';
 	import RiCommunityLine from 'remixicon-svelte/icons/community-line';
 
+	import { uploadMenu } from '$lib/components/upload/upload-menu';
 	import { cn } from '$lib/utils';
 
 	interface RailItem {
 		label: string;
 		icon: Component<{ class?: string }>;
 		href: string;
+		children?: { label: string; href: string }[];
 	}
 
 	interface Props {
@@ -41,7 +43,12 @@
 		...(role === 'ms' || role === 'superadmin' || role === "admin"
 			? [
 					[
-						{ label: 'Upload Dokumen', icon: RiFileUploadLine, href: '/upload' },
+						{
+							label: 'Upload Dokumen',
+							icon: RiFileUploadLine,
+							href: '/upload',
+							children: uploadMenu
+						},
 						{ label: 'Data Departement', icon: RiBuilding2Line, href: '/department' }
 					]
 				]
@@ -70,20 +77,55 @@
 		{#each group as item (item.label)}
 			{@const Icon = item.icon}
 			{@const active = page.url.pathname.startsWith(item.href)}
-			<a
-				href={item.href}
-				title={item.label}
-				aria-label={item.label}
-				aria-current={active ? 'page' : undefined}
-				class={cn(
-					base,
-					active
-						? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/30'
-						: 'hover:border-primary/30 hover:text-primary'
-				)}
-			>
-				<Icon class="size-5" />
-			</a>
+			<div class="group relative">
+				<a
+					href={item.href}
+					title={item.children ? undefined : item.label}
+					aria-label={item.label}
+					aria-current={active ? 'page' : undefined}
+					class={cn(
+						base,
+						active
+							? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/30'
+							: 'hover:border-primary/30 hover:text-primary'
+					)}
+				>
+					<Icon class="size-5" />
+				</a>
+
+				{#if item.children}
+					<!-- submenu melayang; pl-2 menjaga hover tetap aktif saat kursor pindah ke panel -->
+					<div
+						class="invisible absolute top-0 left-full z-50 pl-2 opacity-0 transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100"
+					>
+						<div class="w-48 rounded-xl border bg-popover p-1.5 shadow-xl shadow-black/10">
+							<p
+								class="px-2.5 pt-1 pb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+							>
+								{item.label}
+							</p>
+							{#each item.children as child (child.href)}
+								{@const childActive =
+									child.href === item.href
+										? page.url.pathname === child.href
+										: page.url.pathname.startsWith(child.href)}
+								<a
+									href={child.href}
+									aria-current={childActive ? 'page' : undefined}
+									class={cn(
+										'block rounded-lg px-2.5 py-2 text-sm transition',
+										childActive
+											? 'bg-primary/10 font-medium text-primary'
+											: 'text-foreground hover:bg-muted'
+									)}
+								>
+									{child.label}
+								</a>
+							{/each}
+						</div>
+					</div>
+				{/if}
+			</div>
 		{/each}
 	{/each}
 

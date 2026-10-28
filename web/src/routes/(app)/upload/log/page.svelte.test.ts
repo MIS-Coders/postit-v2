@@ -11,7 +11,8 @@ const doc = (nama_dokumen: string, no_dokumen: string) => ({
 	no_dokumen,
 	no_rev: 0,
 	tgl_berlaku: null,
-	tgl_expired: null
+	tgl_hide: null,
+	replaces_id: null
 });
 const actor = (name: string) => ({ id: name, name, role: 'ms' });
 const logs = [

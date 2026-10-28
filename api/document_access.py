@@ -47,10 +47,14 @@ def filter_published_documents(documents, registry_file=None, today=None):
             candidates = aliases.get(_name(source_file), set()) | aliases.get(_name(metadata.get("document_name", "")), set())
             if len(candidates) > 1 and metadata.get("department"):
                 candidates = {key for key in candidates if departments.get(by_id[key]["departement_id"]) == metadata["department"]}
+            # Revisions are always embedded with sop_doc_id, so legacy chunks belong to the original.
+            if len(candidates) > 1:
+                candidates = {key for key in candidates if not by_id[key].get("replaces_id")}
         if len(candidates) != 1:
             continue
         row = by_id[next(iter(candidates))]
-        if row.get("deleted_at") or (row.get("tgl_berlaku") or "") > today:
+        hidden = row.get("tgl_hide") and row["tgl_hide"] <= today
+        if row.get("deleted_at") or hidden or (row.get("tgl_berlaku") or "") > today:
             continue
         # Replaced PDFs must not return old chunks while re-indexing is pending.
         if (row.get("content_updated_at") or str(metadata.get("source", "")).startswith("sop/")) and source_file != row.get("file"):

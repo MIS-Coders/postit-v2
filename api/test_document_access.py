@@ -25,6 +25,15 @@ class DocumentAccessTests(unittest.TestCase):
         self.assertEqual(len(self.filter({'sop_doc_id': '1'}, {'sop_doc_id': '2'}, {'sop_doc_id': '3'}, {'sop_doc_id': '999'})), 1)
         self.assertEqual(len(self.filter({'sop_doc_id': '2'}, today='2026-10-20')), 1)
 
+    def test_scheduled_hide_and_revision_switch_on_the_same_day(self):
+        self.data['sopdoc'][0]['tgl_hide'] = '2026-10-20'
+        self.data['sopdoc'].append({'id': 4, 'type_doc': 'READ', 'departement_id': 1, 'nama_dokumen': 'Active SOP', 'no_dokumen': 'SOP-1', 'file': 'rev1.pdf', 'tgl_berlaku': '2026-10-20', 'replaces_id': 1})
+        self.file.write_text(json.dumps(self.data))
+        before = self.filter({'sop_doc_id': '1'}, {'sop_doc_id': '4'}, {'source': 'MIS/Active SOP.pdf'})
+        self.assertEqual([d.metadata['sop_doc_id'] for d in before], ['1', '1'])
+        after = self.filter({'sop_doc_id': '1'}, {'sop_doc_id': '4'}, {'source': 'MIS/Active SOP.pdf'}, today='2026-10-20')
+        self.assertEqual([d.metadata['sop_doc_id'] for d in after], ['4'])
+
     def test_legacy_aliases_and_deleted_old_names(self):
         docs = self.filter({'source': 'MIS/Active SOP.pdf'}, {'source': 'MIS/Old deleted name.pdf'}, {'source': 'MIS/Waiting SOP.pdf'})
         self.assertEqual(len(docs), 1)

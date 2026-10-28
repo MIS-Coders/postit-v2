@@ -2,7 +2,6 @@
 	import RiArrowLeftLine from 'remixicon-svelte/icons/arrow-left-line';
 	import RiArrowLeftSLine from 'remixicon-svelte/icons/arrow-left-s-line';
 	import RiArrowRightSLine from 'remixicon-svelte/icons/arrow-right-s-line';
-	import RiErrorWarningLine from 'remixicon-svelte/icons/error-warning-line';
 	import RiFileCopyLine from 'remixicon-svelte/icons/file-copy-line';
 	import RiFileTextLine from 'remixicon-svelte/icons/file-text-line';
 	import RiPrinterLine from 'remixicon-svelte/icons/printer-line';
@@ -54,8 +53,6 @@
 		if (numPages && pageNo > numPages) pageNo = numPages;
 	});
 
-	const today = new Date().toISOString().slice(0, 10);
-	const expired = $derived(!!doc?.tgl_expired && doc.tgl_expired < today);
 
 	function fmt(date: string | null) {
 		if (!date) return '-';
@@ -188,22 +185,6 @@
 					</button>
 				{/if}
 			</div>
-
-			{#if expired}
-				<div
-					class="mt-6 rounded-2xl border border-amber-300/70 bg-amber-50 p-5 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
-					role="note"
-				>
-					<div class="flex items-center gap-2 text-lg font-semibold">
-						<RiErrorWarningLine class="size-5" />
-						Melewati tanggal berlaku
-					</div>
-					<p class="mt-1 text-sm text-amber-800 dark:text-amber-300/90">
-						Dokumen ini melewati tanggal berlaku ({fmt(doc.tgl_expired)}), konfirmasi ke Management
-						System sebelum dipakai.
-					</p>
-				</div>
-			{/if}
 
 			<!-- SOP tetap lihat saja; formulir dapat dicetak. -->
 			<div class="mt-8 overflow-hidden rounded-2xl border bg-muted/40">

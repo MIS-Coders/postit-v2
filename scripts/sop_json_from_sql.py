@@ -71,7 +71,7 @@ def main(src: str, dst: str):
         ],
         'sopdoc': [
             {k: d[k] for k in ('id', 'departement_id', 'type_doc', 'no_dokumen', 'nama_dokumen',
-                               'no_rev', 'tgl_berlaku', 'tgl_expired', 'file')}
+                               'no_rev', 'tgl_berlaku', 'file')}
             for d in docs if d['void_status'] == 0
         ],
     }
