@@ -12,20 +12,9 @@ export function validPassword(password: string): boolean {
 	);
 }
 
-export function passwordExpiresAt(changedAt: Date): Date {
-	const expiry = new Date(changedAt);
-	const day = expiry.getUTCDate();
-	expiry.setUTCDate(1);
-	expiry.setUTCMonth(expiry.getUTCMonth() + 3);
-	const lastDay = new Date(
-		Date.UTC(expiry.getUTCFullYear(), expiry.getUTCMonth() + 1, 0)
-	).getUTCDate();
-	expiry.setUTCDate(Math.min(day, lastDay));
-	return expiry;
-}
-
-export function mustChangePassword(changedAt: Date | null, now = new Date()): boolean {
-	return !changedAt || now >= passwordExpiresAt(changedAt);
+/** Password wajib diganti hanya saat login pertama atau setelah direset admin. */
+export function mustChangePassword(changedAt: Date | null): boolean {
+	return !changedAt;
 }
 
 export function canLogin(account: { accountStatus: string; voidStatus: number | null }): boolean {

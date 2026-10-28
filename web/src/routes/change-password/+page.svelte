@@ -10,8 +10,8 @@
 		<h1 class="text-2xl font-semibold">Ganti password</h1>
 		<p class="mt-3 text-sm text-muted-foreground">
 			{data.required
-				? 'Untuk login pertama atau password yang sudah kedaluwarsa, buat password Anda sendiri sebelum melanjutkan.'
-				: 'Buat password baru untuk akun Anda.'} Password berlaku 3 bulan.
+				? 'Untuk login pertama atau setelah password direset, buat password Anda sendiri sebelum melanjutkan.'
+				: 'Buat password baru untuk akun Anda.'}
 		</p>
 		{#if form?.error}<p class="mt-4 text-sm text-destructive" role="alert">{form.error}</p>{/if}
 		<form method="POST" class="mt-5 space-y-4">
