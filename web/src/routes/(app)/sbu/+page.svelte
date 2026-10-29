@@ -106,51 +106,53 @@
 
 			<div class="divide-y">
 				{#each data.sbu as sbu (sbu.id)}
-					<div class="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
-						<form
-							method="POST"
-							action="?/update"
-							class="contents"
-						>
-							<input type="hidden" name="sbuid" value={sbu.id} />
-							<label class="text-sm font-medium">
-								Nama SBU
-								<input
-									class={field}
-									name="nama_sbu"
-									value={sbu.nama_sbu}
-									required
-								/>
-							</label>
-							<label class="text-sm font-medium">
-								GM SBU
-								<select class={field} name="gmsbu_id" value={sbu.userid_sbu ?? ''} required>
-									<option value="">Pilih GM</option>
-									{#each data.users as user}<option value={user.legacyId}>{user.name}</option
-										>{/each}
-								</select>
-							</label>
-							<button
-								class="rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
-								type="submit">Simpan</button
+					<div class="p-5 md:px-6">
+						<div class="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+							<form
+								method="POST"
+								action="?/update"
+								class="contents"
 							>
-						</form>
+								<input type="hidden" name="sbuid" value={sbu.id} />
+								<label class="text-sm font-medium">
+									Nama SBU
+									<input
+										class={field}
+										name="nama_sbu"
+										value={sbu.nama_sbu}
+										required
+									/>
+								</label>
+								<label class="text-sm font-medium">
+									GM SBU
+									<select class={field} name="gmsbu_id" value={sbu.userid_sbu ?? ''} required>
+										<option value="">Pilih GM</option>
+										{#each data.users as user}<option value={user.legacyId}>{user.name}</option
+											>{/each}
+									</select>
+								</label>
+								<button
+									class="rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+									type="submit">Simpan</button
+								>
+							</form>
 						
-						<form method="POST" action="?/delete" class="contents" onsubmit={(event) => {
-							if (!confirm(`Yakin ingin menghapus sbu "${sbu.nama_sbu}"?`)) {
-								event.preventDefault();
-							}
-						}}>
-							<input type="hidden" name="sbuId" value={sbu.id} />
-							<button
-								class="rounded-lg border px-4 py-2 text-sm font-medium text-destructive transition hover:underline"
-								type="submit">Hapus SBU</button
-							>
-						</form>	
+							<form method="POST" action="?/delete" class="contents" onsubmit={(event) => {
+								if (!confirm(`Yakin ingin menghapus sbu "${sbu.nama_sbu}"?`)) {
+									event.preventDefault();
+								}
+							}}>
+								<input type="hidden" name="sbuId" value={sbu.id} />
+								<button
+									class="rounded-lg border px-4 py-2 text-sm font-medium text-destructive transition hover:underline"
+									type="submit">Hapus SBU</button
+								>
+							</form>	
+						</div>
+						<div class="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+							<span>Dibuat {formattedDate(sbu.inputDate)}</span>
+						</div>
 					</div>
-                    <div class="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                        <span>Dibuat {formattedDate(sbu.inputDate)}</span>
-                    </div>
 				{:else}
 					<p class="px-5 py-10 text-center text-sm text-muted-foreground">
 						Tidak ada sbu yang cocok.
