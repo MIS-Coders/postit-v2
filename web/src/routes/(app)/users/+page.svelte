@@ -81,8 +81,7 @@
 		<form method="POST" action="?/create" class="mt-6 rounded-2xl border bg-card p-5 md:p-6">
 			<h2 class="font-semibold">Tambah pengguna</h2>
 			<p class="mt-2 text-xs text-muted-foreground">
-				Password awal minimal 8 karakter, huruf besar, huruf kecil, dan karakter spesial. Pengguna
-				wajib membuat password sendiri saat login pertama.
+				Pengguna wajib membuat password sendiri saat login pertama.
 			</p>
 			<div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
 				<label class="text-sm font-medium">NIK<input class={field} name="nik" required /></label>
@@ -125,22 +124,29 @@
 					</select>
 				</label>
 				<label class="text-sm font-medium"
+					>Role
+					<select class={field} name="role" value="user">
+						{#each data.assignableRoles as role}<option value={role}>{role}</option>{/each}
+					</select>
+				</label>
+				<label class="text-sm font-medium"
 					>Password awal<input
 						class={field}
 						name="password"
 						type="password"
 						minlength="8"
 						autocomplete="new-password"
+						aria-describedby="new-user-password-strength"
 						bind:value={newUserPassword}
 						required
-					/><PasswordStrength password={newUserPassword} class="mt-2 font-normal" /></label
+					/></label
 				>
-				<label class="text-sm font-medium"
-					>Role
-					<select class={field} name="role" value="user">
-						{#each data.assignableRoles as role}<option value={role}>{role}</option>{/each}
-					</select>
-				</label>
+				<!-- indikator di samping kolom password, mengisi sisa baris -->
+				<PasswordStrength
+					id="new-user-password-strength"
+					password={newUserPassword}
+					class="md:pt-6 xl:col-span-3"
+				/>
 			</div>
 			<button
 				class="mt-5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
@@ -385,28 +391,31 @@
 										<form
 											method="POST"
 											action="?/resetPassword"
-											class="flex flex-col gap-3 rounded-xl border bg-card p-4 md:flex-row md:items-end"
+											class="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-[20rem_minmax(0,1fr)] md:gap-x-6"
 										>
 											<input type="hidden" name="userId" value={account.id} />
-											<label class="text-sm font-medium md:w-80"
+											<label class="text-sm font-medium"
 												>Password sementara untuk {account.name}<input
 													class={field}
 													name="password"
 													type="password"
 													minlength="8"
 													autocomplete="new-password"
+													aria-describedby="reset-password-strength"
 													bind:value={resetPassword}
 													required
-												/><PasswordStrength
-													password={resetPassword}
-													class="mt-2 font-normal"
 												/></label
 											>
-											<p class="text-xs text-muted-foreground md:flex-1">
+											<PasswordStrength
+												id="reset-password-strength"
+												password={resetPassword}
+												class="md:pt-6"
+											/>
+											<p class="text-xs text-muted-foreground md:self-center">
 												Sesi pengguna akan diakhiri dan ia wajib membuat password baru saat login
 												berikutnya.
 											</p>
-											<div class="flex gap-2">
+											<div class="flex gap-2 md:justify-end">
 												<button
 													class="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
 													type="button"

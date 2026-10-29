@@ -42,7 +42,8 @@
 		</span>
 	</div>
 
-	<ul class="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
+	<!-- jumlah kolom menyesuaikan lebar yang tersedia, jadi tetap rapi di kolom sempit -->
+	<ul class="grid grid-cols-[repeat(auto-fill,minmax(12rem,1fr))] gap-x-4 gap-y-1 text-xs">
 		{#each passwordRules as rule (rule.id)}
 			{@const met = !!password && rule.test(password)}
 			<li
@@ -62,7 +63,7 @@
 				{:else}
 					<RiAddLine class="size-3.5 shrink-0" />
 				{/if}
-				<span>{rule.label}{rule.required ? '' : ' · disarankan'}</span>
+				<span class="whitespace-nowrap">{rule.label}{rule.required ? '' : ' · disarankan'}</span>
 				<span class="sr-only">{met ? '(terpenuhi)' : '(belum terpenuhi)'}</span>
 			</li>
 		{/each}
