@@ -1,7 +1,11 @@
 <script lang="ts">
+	import PasswordStrength from '$lib/components/auth/password-strength.svelte';
+
 	let { data, form } = $props();
 
 	let openRow = $state<{ id: string; panel: 'edit' | 'reset' } | null>(null);
+	let newUserPassword = $state('');
+	let resetPassword = $state('');
 
 	const field =
 		'mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary';
@@ -20,6 +24,7 @@
 
 	function toggleRow(id: string, panel: 'edit' | 'reset') {
 		openRow = openRow?.id === id && openRow.panel === panel ? null : { id, panel };
+		resetPassword = '';
 	}
 
 	function statusBadge(status: string | null | undefined) {
@@ -126,8 +131,9 @@
 						type="password"
 						minlength="8"
 						autocomplete="new-password"
+						bind:value={newUserPassword}
 						required
-					/></label
+					/><PasswordStrength password={newUserPassword} class="mt-2 font-normal" /></label
 				>
 				<label class="text-sm font-medium"
 					>Role
@@ -167,11 +173,7 @@
 						<option value="">Semua status</option>
 						{#each data.allStatus as status}
 							<option value={status}>
-								{status === 'active'
-								? 'Aktif'
-								: status === 'inactive'
-									? 'Nonaktif'
-									: 'Resign'}
+								{status === 'active' ? 'Aktif' : status === 'inactive' ? 'Nonaktif' : 'Resign'}
 							</option>
 						{/each}
 					</select>
@@ -270,7 +272,12 @@
 												>NIK<input class={field} name="nik" value={account.nik} required /></label
 											>
 											<label class="text-sm font-medium"
-												>Nama<input class={field} name="name" value={account.name} required /></label
+												>Nama<input
+													class={field}
+													name="name"
+													value={account.name}
+													required
+												/></label
 											>
 											<label class="text-sm font-medium"
 												>Username<input
@@ -388,12 +395,15 @@
 													type="password"
 													minlength="8"
 													autocomplete="new-password"
+													bind:value={resetPassword}
 													required
+												/><PasswordStrength
+													password={resetPassword}
+													class="mt-2 font-normal"
 												/></label
 											>
 											<p class="text-xs text-muted-foreground md:flex-1">
-												Minimal 8 karakter, huruf besar, huruf kecil, dan karakter spesial. Sesi
-												pengguna akan diakhiri dan ia wajib membuat password baru saat login
+												Sesi pengguna akan diakhiri dan ia wajib membuat password baru saat login
 												berikutnya.
 											</p>
 											<div class="flex gap-2">

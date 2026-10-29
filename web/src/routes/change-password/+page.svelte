@@ -1,6 +1,9 @@
 <script lang="ts">
-	import { passwordHelp } from '$lib/password-policy';
+	import PasswordStrength from '$lib/components/auth/password-strength.svelte';
+
 	let { data, form } = $props();
+	let newPassword = $state('');
+	let confirmPassword = $state('');
 	const field = 'mt-2 w-full rounded-xl border bg-background px-3 py-3 text-sm';
 </script>
 
@@ -33,10 +36,11 @@
 					maxlength="128"
 					autocomplete="new-password"
 					aria-describedby="password-help"
+					bind:value={newPassword}
 					required
 				/></label
 			>
-			<p id="password-help" class="text-xs text-muted-foreground">{passwordHelp}</p>
+			<PasswordStrength id="password-help" password={newPassword} />
 			<label class="block text-sm font-medium"
 				>Konfirmasi password baru<input
 					class={field}
@@ -45,9 +49,20 @@
 					minlength="8"
 					maxlength="128"
 					autocomplete="new-password"
+					bind:value={confirmPassword}
 					required
 				/></label
 			>
+			{#if confirmPassword}
+				<p
+					class="-mt-2 text-xs {confirmPassword === newPassword
+						? 'text-primary'
+						: 'text-destructive'}"
+					aria-live="polite"
+				>
+					{confirmPassword === newPassword ? 'Password cocok.' : 'Password belum sama.'}
+				</p>
+			{/if}
 			<button
 				class="w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground"
 				type="submit">Simpan dan login kembali</button
