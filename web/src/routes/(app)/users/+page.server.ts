@@ -77,6 +77,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			username: user.username,
 			email: user.email,
 			role: user.role,
+			inputDate: user.inputDate,
 			createdAt: user.createdAt,
 			accountStatus: user.accountStatus,
 			voidStatus: user.voidStatus
@@ -86,7 +87,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.leftJoin(departement, eq(user.idDepartement, departement.id))
 		.leftJoin(level, eq(user.idLevel, level.id))
 		.where(filter)
-		.orderBy(desc(user.createdAt))
+		.orderBy(desc(user.inputDate))
 		.limit(pageSize)
 		.offset((page - 1) * pageSize);
 

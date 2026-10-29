@@ -234,7 +234,7 @@
 									>
 								</td>
 								<td class="px-3 py-3 whitespace-nowrap text-muted-foreground"
-									>{formattedDate(account.createdAt)}</td
+									>{formattedDate(account.inputDate)}</td
 								>
 								<td class="px-5 py-3 md:pr-6">
 									<div class="flex items-center justify-end gap-3 text-xs whitespace-nowrap">

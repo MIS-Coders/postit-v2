@@ -1,7 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { sql } from 'drizzle-orm';
+import { sql, eq, asc, ilike, or, count } from 'drizzle-orm';
 
 import { db } from '$lib/server/db';
+import { user, sbu} from '$lib/server/db/schema';
 import { requireRole } from '$lib/server/roles';
 
 import type { Actions, PageServerLoad } from './$types';
@@ -19,15 +20,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     const requestedPage = Number.parseInt(url.searchParams.get('page') ?? '1', 10);
     const searchTerm = search ? `%${search.toLowerCase()}%` : undefined;
     const searchClause = searchTerm
-        ? sql`WHERE lower(d.nama_sbu) LIKE ${searchTerm}`
-        : sql``;
+        ? or (
+                ilike(sbu.namaSbu, `%${search}%`)
+             )
+        : undefined;
 
-    const totalResult = await db.execute(sql`
-        SELECT COUNT(*)::int AS total
-        FROM public.sbu d
-        ${searchClause}
-    `);
-    const total = Number(totalResult[0]?.total ?? 0);
+    const [{ total }] = await db.select({ total: count() }).from(sbu).where(searchClause);
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const page = Math.min(
         Math.max(Number.isFinite(requestedPage) ? requestedPage : 1, 1),
@@ -35,25 +33,32 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     );
     const offset = (page - 1) * pageSize;
 
-    const rows = await db.execute(sql`
-        SELECT
-            d.id AS id,
-            d.nama_sbu AS nama_sbu, 
-            d.input_date AS input_date
-        FROM public.sbu d
-        ${searchClause}
-        ORDER BY d.nama_sbu ASC
-        LIMIT ${pageSize}
-        OFFSET ${offset}
-    `);
+    const rows = await db
+        .select({
+            id: sbu.id,
+            nama_sbu: sbu.namaSbu,
+            input_date: sbu.inputDate,
+            userid_sbu: sbu.useridSbu,
+            gm_sbu: user.name
+        })
+        .from(sbu)
+        .leftJoin(user, eq(sbu.useridSbu, user.legacyId))
+        .where(searchClause)
+        .orderBy(asc(sbu.namaSbu))
+        .limit(pageSize)
+        .offset(offset);
 
+    const users = await db.select({ legacyId: user.legacyId, name: user.name }).from(user).orderBy(user.name);
     return {
         ...access,
+        users,
         search,
         sbu: rows.map((row) => ({
             id: Number(row.id),
             nama_sbu: String(row.nama_sbu ?? '-'),
-            inputDate: row.input_date ? String(row.input_date) : null
+            inputDate: row.input_date ? String(row.input_date) : null,
+            userid_sbu: row.userid_sbu ?? null,
+            gm_sbu: row.gm_sbu ?? null
         })),
         pagination: { page, pageSize, total, totalPages }
     };
@@ -64,10 +69,11 @@ export const actions: Actions = {
         await requireRole(locals, ['admin', 'superadmin']);
         const form = await request.formData();
         const namaSbu = value(form, 'nama_sbu');
+        const gmsbuId = value(form, 'gmsbu_id');
         const inputBy = locals.legacyUserId ?? 0;
 
-        if (!namaSbu) {
-            return fail(400, { error: 'Nama sbu harus diisi.' });
+        if (!namaSbu || !gmsbuId) {
+            return fail(400, { error: 'Nama sbu dan GM harus diisi.' });
         }
 
         const [duplicate] = await db.execute(sql`
@@ -79,8 +85,8 @@ export const actions: Actions = {
         if (duplicate) return fail(409, { error: 'Nama sbu tersebut sudah ada.' });
 
         await db.execute(sql`
-            INSERT INTO public.sbu (nama_sbu, input_by_userid, input_date)
-            VALUES (${namaSbu}, ${inputBy}, CURRENT_TIMESTAMP)
+            INSERT INTO public.sbu (nama_sbu, userid_sbu, input_by_userid, input_date)
+            VALUES (${namaSbu}, ${gmsbuId}, ${inputBy}, CURRENT_TIMESTAMP)
         `);
 
         throw redirect(303, `${url.pathname}${url.search}`);
@@ -91,18 +97,19 @@ export const actions: Actions = {
         const form = await request.formData();
         const sbuId = Number.parseInt(value(form, 'sbuid'), 10);
         const namaSbu = value(form, 'nama_sbu');
+        const gmsbuId = value(form, 'gmsbu_id');
         const updateBy = locals.legacyUserId ?? 0;
 
         if (
             !Number.isInteger(sbuId) ||
-            !namaSbu
+            !namaSbu || !gmsbuId
         ) {
-            return fail(400, { error: 'Data sbu tidak valid.' });
+            return fail(400, { error: 'Data sbu atau GM tidak valid.' });
         }
 
         await db.execute(sql`
             UPDATE public.sbu
-            SET nama_sbu = ${namaSbu}, edit_by_userid = ${updateBy}, edit_date = CURRENT_TIMESTAMP
+            SET nama_sbu = ${namaSbu}, userid_sbu = ${gmsbuId}, edit_by_userid = ${updateBy}, edit_date = CURRENT_TIMESTAMP
             WHERE id = ${sbuId}
         `);
 
