@@ -185,6 +185,7 @@
 				{activeTab === 'READ'
 					? 'PDF maksimal 25 MB. SOP/IK akan diproses otomatis untuk pencarian AI.'
 					: 'PDF maksimal 25 MB. Formulir akan diproses otomatis untuk pencarian AI.'}
+				Dokumen baru tercatat sebagai Rev. 0.
 			</p>
 
 			<div class="mt-5 grid gap-4 sm:grid-cols-2">
@@ -203,16 +204,6 @@
 							>{/each}
 					</select>
 				</label>
-				<label class="text-sm font-medium"
-					>Revisi<input
-						class={field}
-						name="noRev"
-						type="number"
-						min="0"
-						value="0"
-						required
-					/></label
-				>
 				<label class="text-sm font-medium"
 					>Tanggal berlaku<input class={field} name="tglBerlaku" type="date" /></label
 				>
@@ -319,7 +310,8 @@
 									</p>
 								{:else}
 									<p class="mt-2 text-xs text-muted-foreground">
-										Versi sekarang tetap tampil sampai tanggal berlaku revisi.
+										Akan otomatis menjadi Rev. {last.no_rev + 1}. Versi sekarang tetap tampil sampai
+										tanggal berlaku revisi.
 										{#if queued.length}Revisi ini masuk antrean setelah Rev. {last.no_rev} ({fmt(
 												last.tgl_berlaku
 											)}).{/if}
@@ -357,16 +349,6 @@
 														>{department.nama_departement}</option
 													>{/each}</select
 											></label
-										>
-										<label class="text-sm"
-											>Revisi<input
-												class={field}
-												name="noRev"
-												type="number"
-												min="0"
-												value={last.no_rev + 1}
-												required
-											/></label
 										>
 										<label class="text-sm"
 											>Tanggal berlaku revisi<input
@@ -576,16 +558,6 @@
 		>
 		<label class="text-sm"
 			>Nomor<input class={field} name="noDokumen" value={doc.no_dokumen} required /></label
-		>
-		<label class="text-sm"
-			>Revisi<input
-				class={field}
-				name="noRev"
-				type="number"
-				min="0"
-				value={doc.no_rev}
-				required
-			/></label
 		>
 		<label class="text-sm"
 			>Tanggal berlaku<input

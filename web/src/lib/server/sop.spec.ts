@@ -38,7 +38,6 @@ const input = {
 	departementId: 1,
 	namaDokumen: 'SOP test',
 	noDokumen: 'CHECK-1',
-	noRev: 0,
 	tglBerlaku: null,
 	filename: 'test.pdf',
 	pdf: new TextEncoder().encode('%PDF-fixture')
@@ -101,16 +100,8 @@ describe('SOP persistence and audit', () => {
 describe('scheduled revisions and hiding', () => {
 	it('queues revisions behind the latest version and relinks on cancel', async () => {
 		const doc = await createSopDocument(input, actor);
-		const first = await scheduleSopRevision(
-			doc.id,
-			{ ...input, noRev: 1, tglBerlaku: '2099-01-01' },
-			actor
-		);
-		const second = await scheduleSopRevision(
-			doc.id,
-			{ ...input, noRev: 2, tglBerlaku: '2099-02-01' },
-			actor
-		);
+		const first = await scheduleSopRevision(doc.id, { ...input, tglBerlaku: '2099-01-01' }, actor);
+		const second = await scheduleSopRevision(doc.id, { ...input, tglBerlaku: '2099-02-01' }, actor);
 		expect(second.replaces_id).toBe(first.id);
 		await expect(
 			scheduleSopRevision(doc.id, { ...input, tglBerlaku: '2099-01-15' }, actor)
@@ -128,9 +119,10 @@ describe('scheduled revisions and hiding', () => {
 
 		await cancelSopRevision(first.id, actor);
 		const [relinked] = (await listDocumentSeries()).series;
-		expect(relinked.versions.map((v) => [v.id, v.tgl_hide, v.replaces_id])).toEqual([
-			[doc.id, '2099-02-01', null],
-			[second.id, null, doc.id]
+		// Revisi berikutnya maju satu nomor sehingga urutannya tetap Rev. 0, Rev. 1.
+		expect(relinked.versions.map((v) => [v.id, v.no_rev, v.tgl_hide, v.replaces_id])).toEqual([
+			[doc.id, 0, '2099-02-01', null],
+			[second.id, 1, null, doc.id]
 		]);
 		await expect(cancelSopRevision(doc.id, actor)).rejects.toThrow('belum berlaku');
 		expect(listDocumentLogs().map((log) => log.action)).toEqual([
@@ -144,7 +136,7 @@ describe('scheduled revisions and hiding', () => {
 		const doc = await createSopDocument(input, actor);
 		const revision = await scheduleSopRevision(
 			doc.id,
-			{ ...input, noRev: 1, tglBerlaku: jakartaDate() },
+			{ ...input, tglBerlaku: jakartaDate() },
 			actor
 		);
 		expect((await listSop('READ')).docs.map((d) => d.id)).toEqual([revision.id]);

@@ -80,7 +80,6 @@ export const documentActions = {
 		const noDokumen = textValue(form.get('noDokumen'));
 		const type = textValue(form.get('type')) as TypeDoc;
 		const departementId = Number(textValue(form.get('departementId')));
-		const noRev = Number(textValue(form.get('noRev')));
 
 		const invalidPdf = pdfError(pdf);
 		if (invalidPdf) return fail(400, { error: invalidPdf });
@@ -88,9 +87,7 @@ export const documentActions = {
 			!['READ', 'FORM'].includes(type) ||
 			!namaDokumen ||
 			!noDokumen ||
-			!Number.isInteger(departementId) ||
-			!Number.isInteger(noRev) ||
-			noRev < 0
+			!Number.isInteger(departementId)
 		) {
 			return fail(400, { error: 'Lengkapi metadata dokumen dengan benar.' });
 		}
@@ -104,7 +101,6 @@ export const documentActions = {
 					departementId,
 					namaDokumen,
 					noDokumen,
-					noRev,
 					tglBerlaku: textValue(form.get('tglBerlaku')) || null,
 					filename: file.name,
 					pdf: new Uint8Array(await file.arrayBuffer())
@@ -145,7 +141,6 @@ export const documentActions = {
 					departementId: Number(form.get('departementId')),
 					namaDokumen: textValue(form.get('namaDokumen')),
 					noDokumen: textValue(form.get('noDokumen')),
-					noRev: Number(form.get('noRev')),
 					tglBerlaku: textValue(form.get('tglBerlaku')) || null,
 					...(pdf instanceof File && pdf.size
 						? { filename: pdf.name, pdf: new Uint8Array(await pdf.arrayBuffer()) }
@@ -183,7 +178,6 @@ export const documentActions = {
 					departementId: Number(form.get('departementId')),
 					namaDokumen: textValue(form.get('namaDokumen')),
 					noDokumen: textValue(form.get('noDokumen')),
-					noRev: Number(form.get('noRev')),
 					tglBerlaku: textValue(form.get('tglBerlaku')) || null,
 					filename: file.name,
 					pdf: new Uint8Array(await file.arrayBuffer())

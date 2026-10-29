@@ -162,7 +162,6 @@ export interface DocumentMetadata {
 	departementId: number;
 	namaDokumen: string;
 	noDokumen: string;
-	noRev: number;
 	tglBerlaku: string | null;
 }
 export interface CreateSopDocumentInput extends DocumentMetadata {
@@ -202,13 +201,7 @@ async function mutate<T>(operation: (data: SopData) => Promise<T>): Promise<T> {
 	}
 }
 function metadata(input: DocumentMetadata, departements: Departement[]) {
-	if (
-		!['READ', 'FORM'].includes(input.type) ||
-		!input.namaDokumen ||
-		!input.noDokumen ||
-		!Number.isInteger(input.noRev) ||
-		input.noRev < 0
-	)
+	if (!['READ', 'FORM'].includes(input.type) || !input.namaDokumen || !input.noDokumen)
 		throw new Error('Metadata dokumen tidak valid.');
 	if (!departements.some((d) => d.id === input.departementId))
 		throw new Error('Departemen tidak valid.');
@@ -218,7 +211,6 @@ function metadata(input: DocumentMetadata, departements: Departement[]) {
 		departement_id: input.departementId,
 		nama_dokumen: input.namaDokumen,
 		no_dokumen: input.noDokumen,
-		no_rev: input.noRev,
 		tgl_berlaku: input.tglBerlaku
 	};
 }
@@ -285,9 +277,11 @@ export async function createSopDocument(
 	return mutate(async (data) => {
 		const fields = metadata(input, departements);
 		const id = nextId(data);
+		// Nomor revisi tidak diinput: upload pertama Rev. 0, tiap revisi terjadwal +1.
 		const row: SopRow = {
 			id,
 			...fields,
+			no_rev: 0,
 			tgl_hide: null,
 			replaces_id: null,
 			file: await savePdf(id, input.filename, input.pdf)
@@ -352,6 +346,7 @@ export async function scheduleSopRevision(
 		const row: SopRow = {
 			id: newId,
 			...fields,
+			no_rev: tail.no_rev + 1,
 			tgl_hide: null,
 			replaces_id: tail.id,
 			file: await savePdf(newId, input.filename, input.pdf)
@@ -370,6 +365,8 @@ export async function cancelSopRevision(id: number, actor: DocumentActor): Promi
 		if (!row || !prev || documentStatus(row) !== 'waiting')
 			throw new Error('Hanya revisi yang belum berlaku yang dapat dibatalkan.');
 		const next = successor(data, row);
+		// Revisi setelahnya maju satu nomor agar urutan revisi tetap tanpa celah.
+		for (let later = next; later; later = successor(data, later)) later.no_rev -= 1;
 		if (next) next.replaces_id = prev.id;
 		prev.tgl_hide = next?.tgl_berlaku ?? null;
 		log(data, actor, 'cancel_revision', row, null);
