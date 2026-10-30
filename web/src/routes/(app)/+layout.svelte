@@ -4,23 +4,41 @@
 	import RiChat3Line from 'remixicon-svelte/icons/chat-3-line';
 	import RiFileList3Line from 'remixicon-svelte/icons/file-list-3-line';
 	import RiSparkling2Line from 'remixicon-svelte/icons/sparkling-2-line';
+	import RiBuilding2Line from 'remixicon-svelte/icons/building-2-line';
+	import RiFileUploadLine from 'remixicon-svelte/icons/file-upload-line';
+	import RiTeamLine from 'remixicon-svelte/icons/team-line';
+	import RiIdCardLine from 'remixicon-svelte/icons/id-card-line';
+	import RiCommunityLine from 'remixicon-svelte/icons/community-line';
 
 	import AppRail from '$lib/components/app/app-rail.svelte';
 	import AppTopbar from '$lib/components/app/app-topbar.svelte';
 	import AskAiPanel from '$lib/components/chat/ask-ai-panel.svelte';
 	import { ui } from '$lib/state/ui.svelte';
 	import { cn } from '$lib/utils';
+	import { uploadMenu } from '../../lib/components/upload/upload-menu';
 
 	let { children, data } = $props();
 
-	const mobileTabs = [
+	const mobileTabs = $derived([
 		{ href: '/sop', label: 'SOP/IK', icon: RiBookOpenLine },
 		{ href: '/formulir', label: 'Formulir', icon: RiFileList3Line },
-		{ href: '/chatbot', label: 'Chatbot', icon: RiChat3Line }
-	];
+		{ href: '/chatbot', label: 'Chatbot', icon: RiChat3Line },
+		...(data.role === 'superadmin'
+			? [{ href: '/development/chatbot-quality', label: 'AI Lab', icon: RiSparkling2Line }]
+			: []),
+		...(data.role === 'ms' || data.role === 'superadmin' || data.role === 'admin'
+			? [{ href: '/upload', label: 'Upload Dokumen', icon: RiFileUploadLine, children: uploadMenu}, 
+			{ href: '/department', label: 'Departement', icon: RiBuilding2Line, class: 'pl-6' }]
+			: []),
+		...(data.role === 'admin' || data.role === 'superadmin'
+			? [{ href: '/users', label: 'Data User', icon: RiTeamLine },
+			   { href: '/level', label: 'Data Level', icon: RiIdCardLine},
+			   { href: '/sbu', label: 'Data SBU', icon: RiCommunityLine }]
+			: [])
+	]);
 
 	const tabClass =
-		'flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium';
+		'flex min-w-[76px] shrink-0 flex-col items-center justify-center gap-0.5 text-[11px] font-medium';
 
 	function preventContextMenu(event: MouseEvent) {
 		event.preventDefault();
@@ -60,8 +78,8 @@
 
 		<!-- navigasi bawah khusus mobile (menggantikan tab di top bar & rail kiri) -->
 		<nav
-			class="flex h-16 shrink-0 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
-			aria-label="Navigasi"
+			class="flex h-16 shrink-0 gap-3 overflow-x-auto border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
+    		aria-label="Navigasi"
 		>
 			{#each mobileTabs as tab (tab.href)}
 				{@const active = page.url.pathname.startsWith(tab.href)}
@@ -69,7 +87,8 @@
 				<a
 					href={tab.href}
 					aria-current={active ? 'page' : undefined}
-					class={cn(tabClass, active ? 'text-primary' : 'text-muted-foreground')}
+					class={cn('flex min-w-[76px] shrink-0 flex-col items-center justify-center gap-0.5 text-[11px] font-medium',
+    				active ? 'text-primary' : 'text-muted-foreground')}
 				>
 					<span
 						class={cn(
