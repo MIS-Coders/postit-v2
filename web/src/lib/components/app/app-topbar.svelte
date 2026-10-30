@@ -55,8 +55,8 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<header class="flex h-16 shrink-0 items-center gap-3 px-3 md:px-4">
-	<div class="flex items-center gap-3">
+<header class="flex h-16 w-full shrink-0 items-center gap-2 overflow-visible px-2 sm:gap-3 sm:px-3 md:px-4">
+	<div class="flex shrink-0 items-center gap-2 md:gap-3">
 		<button
 			type="button"
 			class="hidden size-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-background hover:text-foreground md:flex"
@@ -67,7 +67,7 @@
 		</button>
 		<span class="hidden h-6 w-px bg-border md:block"></span>
 
-		<a href="/sop" class="flex items-center gap-2">
+		<a href="/sop" class="flex shrink-0 items-center gap-2">
 			<img
 				src="/brand/postit-mis-favicon.png"
 				alt="PostIt"
@@ -82,10 +82,10 @@
 		</span>
 	</div>
 
-	<div class="ml-auto flex items-center gap-2">
-		<div class="relative">
+	<div class="ml-auto flex min-w-0 flex-1 items-center justify-end gap-1 sm:gap-2">
+		<div class="relative min-w-0 flex-1">
 			<label
-				class="flex h-9 w-44 items-center gap-2 rounded-full border bg-background px-3 text-sm shadow-xs transition focus-within:border-primary/40 focus-within:ring-3 focus-within:ring-primary/15 md:w-72"
+				class="flex h-9 w-full min-w-0 items-center gap-2 rounded-full border bg-background px-2 sm:px-3 text-sm shadow-xs transition focus-within:border-primary/40 focus-within:ring-3 focus-within:ring-primary/15 md:w-72"
 			>
 				<RiSearchLine class="size-4 shrink-0 text-muted-foreground" />
 				<input
@@ -149,21 +149,23 @@
 			{/if}
 		</div>
 
-		<ThemeToggle />
+		<div class="shrink-0">
+			<ThemeToggle />
+		</div>
 
 		{#if user}
 			<a
 				href="/profile"
-				class="flex size-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground md:w-auto md:max-w-36 md:gap-1.5 md:px-2"
+				class="flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground md:w-auto md:max-w-36 md:gap-1.5 md:px-2"
 				title="Profil saya"
 			>
 				<RiUser3Line class="size-4 shrink-0" />
 				<span class="hidden truncate text-sm font-medium md:inline">{user.name}</span>
 			</a>
-			<form method="POST" action="/logout">
+			<form method="POST" action="/logout" class="shrink-0">
 				<button
 					type="submit"
-					class="flex size-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
+					class="flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
 					title="Keluar"
 					aria-label="Keluar"
 				>
