@@ -112,6 +112,14 @@
 							{data.profile.inputDate ? formattedDate(data.profile.inputDate) : '-'}
 						</dd>
 					</div>
+					<div>
+						<dt class="text-muted-foreground">Bisnis unit</dt>
+						<dd class="mt-1 font-medium">{data.profile.sbu}</dd>
+					</div>
+					<div>
+						<dt class="text-muted-foreground">Departement</dt>
+						<dd class="mt-1 font-medium">{data.profile.departement}</dd>
+					</div>
 				</dl>
 			</aside>
 		</div>

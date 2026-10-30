@@ -2,7 +2,7 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 
 import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema';
+import { user, sbu, departement } from '$lib/server/db/schema';
 import { getRole } from '$lib/server/roles';
 
 import type { Actions, PageServerLoad } from './$types';
@@ -26,9 +26,15 @@ export const load: PageServerLoad = async ({ locals }) => {
 			nik: user.nik,
 			nama: user.nama,
 			role: user.role,
-			inputDate: user.inputDate
+			inputDate: user.inputDate,
+			departementId: user.idDepartement,
+			departement: departement.namaDepartement,
+			sbuId: user.idSbu,
+			sbu: sbu.namaSbu
 		})
 		.from(user)
+		.leftJoin(sbu, eq(user.idSbu, sbu.id))
+		.leftJoin(departement, eq(user.idDepartement, departement.id))
 		.where(eq(user.id, locals.user.id))
 		.limit(1);
 
