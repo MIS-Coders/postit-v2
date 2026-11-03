@@ -16,7 +16,7 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const usernamePattern = /^[a-z0-9._-]{3,64}$/;
 const pageSize = 10;
 
-const allStatus = ['active', 'inactive', 'resigned'] as const;
+const allStatus = ['active', 'inactive'] as const;
 type AccountStatusFilter = (typeof allStatus)[number];
 
 function validStatus(value: string): value is AccountStatusFilter {

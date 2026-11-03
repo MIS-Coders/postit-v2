@@ -31,11 +31,6 @@
 	function statusBadge(status: string | null | undefined) {
 		if (status === 'inactive')
 			return { label: 'Nonaktif', class: 'bg-muted text-muted-foreground border' };
-		if (status === 'resigned')
-			return {
-				label: 'Resign',
-				class: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-			};
 		return {
 			label: 'Aktif',
 			class: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
@@ -180,7 +175,7 @@
 						<option value="">Semua status</option>
 						{#each data.allStatus as status}
 							<option value={status}>
-								{status === 'active' ? 'Aktif' : status === 'inactive' ? 'Nonaktif' : 'Resign'}
+								{status === 'active' ? 'Aktif' : 'Nonaktif'}
 							</option>
 						{/each}
 					</select>
