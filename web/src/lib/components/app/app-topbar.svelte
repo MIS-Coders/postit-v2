@@ -73,7 +73,7 @@
 				alt="PostIt"
 				class="size-8 rounded-lg shadow-sm shadow-primary/30"
 			/>
-			<span class="text-lg font-semibold tracking-tight">PostIt</span>
+			<span class="text-lg font-semibold tracking-tight">SOP</span>
 		</a>
 		<span
 			class="hidden rounded-md border border-primary/25 bg-primary/10 px-2 py-0.5 text-xs font-semibold tracking-wide text-primary sm:inline-block"
