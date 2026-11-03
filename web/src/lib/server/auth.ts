@@ -38,6 +38,15 @@ export const auth = betterAuth({
 						throw new APIError('FORBIDDEN', {
 							message: 'Akun tidak aktif. Hubungi administrator.'
 						});
+				},
+				// Sesi dihapus saat logout/ganti password, jadi waktu login terakhir disimpan di user.
+				after: async (session) => {
+					// Pencatatan saja: kegagalan di sini tidak boleh menggagalkan login.
+					await db
+						.update(user)
+						.set({ lastLoginAt: new Date() })
+						.where(eq(user.id, session.userId))
+						.catch((cause) => console.error('Gagal mencatat login terakhir', cause));
 				}
 			}
 		}
