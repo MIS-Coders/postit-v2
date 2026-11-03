@@ -16,6 +16,7 @@ const person = (id: string, name: string) => ({
 	username: id,
 	email: `${id}@example.com`,
 	role: 'user',
+	inputDate: '2026-10-01T03:00:00Z',
 	createdAt: '2026-10-01T03:00:00Z',
 	accountStatus: 'active',
 	voidStatus: 0

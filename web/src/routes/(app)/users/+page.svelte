@@ -1,5 +1,7 @@
 <script lang="ts">
 	import PasswordStrength from '$lib/components/auth/password-strength.svelte';
+	import UsersPagination from '$lib/components/users/users-pagination.svelte';
+	import UsersSubnav from '$lib/components/users/users-subnav.svelte';
 	import { cn } from '$lib/utils';
 
 	let { data, form } = $props();
@@ -10,14 +12,6 @@
 
 	const field =
 		'mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary';
-	const pageNumbers = $derived(
-		Array.from({ length: data.pagination.totalPages }, (_, index) => index + 1).filter(
-			(page) =>
-				page === 1 ||
-				page === data.pagination.totalPages ||
-				Math.abs(page - data.pagination.page) <= 1
-		)
-	);
 
 	function formattedDate(date: Date | string) {
 		return new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(new Date(date));
@@ -57,6 +51,8 @@
 				Tambah, ubah role, atau hapus akses pengguna PostIt.
 			</p>
 		</div>
+
+		<UsersSubnav />
 
 		{#if form?.error}
 			<p
@@ -445,41 +441,11 @@
 					</tbody>
 				</table>
 			</div>
-			{#if data.pagination.totalPages > 1}
-				<nav
-					class="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-4 md:px-6"
-					aria-label="Pagination pengguna"
-				>
-					<p class="text-xs text-muted-foreground">
-						Halaman {data.pagination.page} dari {data.pagination.totalPages}
-					</p>
-					<div class="flex items-center gap-1">
-						<a
-							href={pageHref(data.pagination.page - 1)}
-							aria-disabled={data.pagination.page === 1}
-							class="rounded-lg border px-3 py-1.5 text-sm font-medium transition hover:bg-muted aria-disabled:pointer-events-none aria-disabled:opacity-40"
-							>Sebelumnya</a
-						>
-						{#each pageNumbers as page, index (page)}
-							{#if index > 0 && page - pageNumbers[index - 1] > 1}<span
-									class="px-1 text-muted-foreground">…</span
-								>{/if}
-							<a
-								href={pageHref(page)}
-								aria-current={page === data.pagination.page ? 'page' : undefined}
-								class="flex size-8 items-center justify-center rounded-lg text-sm font-medium transition hover:bg-muted aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground"
-								>{page}</a
-							>
-						{/each}
-						<a
-							href={pageHref(data.pagination.page + 1)}
-							aria-disabled={data.pagination.page === data.pagination.totalPages}
-							class="rounded-lg border px-3 py-1.5 text-sm font-medium transition hover:bg-muted aria-disabled:pointer-events-none aria-disabled:opacity-40"
-							>Berikutnya</a
-						>
-					</div>
-				</nav>
-			{/if}
+			<UsersPagination
+				page={data.pagination.page}
+				totalPages={data.pagination.totalPages}
+				href={pageHref}
+			/>
 		</div>
 	</div>
 </section>

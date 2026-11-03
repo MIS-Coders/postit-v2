@@ -16,6 +16,7 @@
 	import { ui } from '$lib/state/ui.svelte';
 	import { cn } from '$lib/utils';
 	import { uploadMenu } from '../../lib/components/upload/upload-menu';
+	import { usersMenu } from '$lib/components/users/users-menu';
 
 	let { children, data } = $props();
 
@@ -31,7 +32,7 @@
 			{ href: '/department', label: 'Departement', icon: RiBuilding2Line, class: 'pl-6' }]
 			: []),
 		...(data.role === 'admin' || data.role === 'superadmin'
-			? [{ href: '/users', label: 'Data User', icon: RiTeamLine },
+			? [{ href: '/users', label: 'Data User', icon: RiTeamLine, children: usersMenu },
 			   { href: '/level', label: 'Data Level', icon: RiIdCardLine},
 			   { href: '/sbu', label: 'Data SBU', icon: RiCommunityLine }]
 			: [])

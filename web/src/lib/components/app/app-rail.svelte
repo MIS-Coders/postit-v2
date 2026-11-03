@@ -13,6 +13,7 @@
 	import RiCommunityLine from 'remixicon-svelte/icons/community-line';
 
 	import { uploadMenu } from '$lib/components/upload/upload-menu';
+	import { usersMenu } from '$lib/components/users/users-menu';
 	import { cn } from '$lib/utils';
 
 	interface RailItem {
@@ -56,7 +57,7 @@
 		...(role === 'admin' || role === 'superadmin'
 			? [
 					[
-						{ label: 'Data User', icon: RiTeamLine, href: '/users' },
+						{ label: 'Data User', icon: RiTeamLine, href: '/users', children: usersMenu },
 						{ label: 'Data Level', icon: RiIdCardLine, href: '/level' },
 						{ label: 'Data SBU', icon: RiCommunityLine, href: '/sbu'}
 					]

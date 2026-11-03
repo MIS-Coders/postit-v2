@@ -30,6 +30,7 @@ export const user = pgTable("user", {
 	voidStatus: integer("void_status").default(0),
 	accountStatus: text("account_status").default('active').notNull(),
 	passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }),
+	lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
 }, (table) => [
 	uniqueIndex("user_username_unique").using("btree", table.username.asc().nullsLast().op("text_ops")),
 	unique("user_email_unique").on(table.email),
