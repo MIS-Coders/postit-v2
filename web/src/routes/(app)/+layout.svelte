@@ -53,7 +53,7 @@
 
 <svelte:window oncontextmenu={preventContextMenu} onkeydown={preventBrowserActions} />
 
-<div class="flex h-dvh bg-muted font-sans md:p-4">
+<div class="fixed inset-0 flex overflow-hidden bg-muted font-sans md:p-4">
 	<div
 		class="flex min-w-0 flex-1 flex-col bg-sidebar md:rounded-[1.75rem] md:border md:shadow-[0_0_0_6px] md:shadow-primary/5"
 	>
