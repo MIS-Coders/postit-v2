@@ -214,7 +214,7 @@
 						></div>
 						<ChatMascot class="w-24 tall:w-32 tall:md:w-44" interactive />
 						<div
-							class="absolute top-[8%] right-[calc(100%+0.75rem)] max-w-48 rounded-2xl rounded-br-md bg-card px-3 py-1.5 text-right text-sm font-semibold whitespace-nowrap shadow-lg ring-1 ring-border tall:max-w-56 tall:px-4 tall:py-2 tall:text-base"
+							class="absolute bottom-[calc(100%+0.75rem)] left-1/2 w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-2xl rounded-bl-md bg-card px-3 py-1.5 text-center text-sm font-semibold leading-tight whitespace-normal break-words shadow-lg ring-1 ring-border tall:max-w-56 tall:px-4 tall:py-2 tall:text-base md:bottom-auto md:top-[8%] md:left-auto md:right-[calc(100%+0.75rem)] md:w-auto md:translate-x-0 md:whitespace-nowrap md:text-right"
 						>
 							{#key greetingIndex}
 								<span class="greeting-word">{greetings[greetingIndex]}</span>

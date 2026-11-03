@@ -2,6 +2,7 @@
 	import PasswordStrength from '$lib/components/auth/password-strength.svelte';
 	import UsersPagination from '$lib/components/users/users-pagination.svelte';
 	import UsersSubnav from '$lib/components/users/users-subnav.svelte';
+	import { cn } from '$lib/utils';
 
 	let { data, form } = $props();
 
@@ -342,18 +343,7 @@
 													</select>
 												{/if}
 											</label>
-											<label class="text-sm font-medium"
-												>Status
-												<select
-													class={field}
-													name="accountStatus"
-													value={account.accountStatus ?? 'active'}
-												>
-													<option value="active">Aktif</option><option value="inactive"
-														>Nonaktif</option
-													><option value="resigned">Resign</option>
-												</select>
-											</label>
+
 											<div class="flex items-center gap-2 md:col-span-2 xl:col-span-5">
 												<button
 													class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
@@ -364,7 +354,7 @@
 													type="button"
 													onclick={() => (openRow = null)}>Batal</button
 												>
-												{#if account.id !== data.userId}
+												<!-- {#if account.id !== data.userId}
 													<button
 														class="ml-auto rounded-lg px-4 py-2 text-sm font-medium text-destructive transition hover:underline"
 														type="submit"
@@ -376,6 +366,26 @@
 															}
 														}}>Hapus pengguna</button
 													>
+												{/if} -->
+												
+												{#if account.id !== data.userId}
+													<input type="hidden" name="userId" value={account.id} />
+
+													<button
+														class={cn(
+															'ml-auto rounded-lg px-4 py-2 text-sm font-medium transition',
+															account.accountStatus === 'active'
+																? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
+																: 'bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/20 dark:text-emerald-400'
+														)}
+														type="submit"
+														name="status"
+														value={account.voidStatus === 1 ? '1' : '0'}
+														formaction="?/toggleStatus"
+														formnovalidate
+													>
+														{account.accountStatus === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
+													</button>				
 												{/if}
 											</div>
 										</form>
