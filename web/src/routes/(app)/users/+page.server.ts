@@ -213,11 +213,6 @@ export const actions: Actions = {
 		const levelId = parseIdInput(value(form, 'levelId'));
 		const username = value(form, 'username').toLowerCase();
 		const role = value(form, 'role');
-		const accountStatus = value(form, 'accountStatus');
-		if (!['active', 'inactive', 'resigned'].includes(accountStatus))
-			return fail(400, { error: 'Status akun tidak valid.' });
-		if (userId === access.userId && accountStatus !== 'active')
-			return fail(400, { error: 'Akun sendiri tidak dapat dinonaktifkan.' });
 
 		if (
 			!userId ||
@@ -263,14 +258,11 @@ export const actions: Actions = {
 						idLevel: levelId,
 						username,
 						role,
-						accountStatus,
-						voidStatus: accountStatus === 'active' ? 0 : 1,
 						updatedAt: new Date(),
 						editByUserid: locals.legacyUserId ?? 0,
 						editDate: new Date()
 					})
 					.where(eq(user.id, userId));
-				if (accountStatus !== 'active') await tx.delete(session).where(eq(session.userId, userId));
 			});
 		} catch (cause) {
 			console.error('Gagal memperbarui pengguna', cause);
@@ -348,14 +340,15 @@ export const actions: Actions = {
 		const access = await requireRole(locals, ['admin', 'superadmin']);
 		const form = await request.formData();
 		const userId = value(form, 'userId');
-		const status = value(form, 'status') === '1' ? 1 : 0;
+		const currentVoidStatus = value(form, 'status');
 
 		if (!userId) return fail(400, { error: 'Pengguna tidak ditemukan.' });
+		if (!['0', '1'].includes(currentVoidStatus)) return fail(400, { error: 'Status pengguna tidak valid.' });
 		if (userId === access.userId)
 			return fail(400, { error: 'Akun sendiri tidak dapat diubah statusnya.' });
 
 		const [target] = await db
-			.select({ role: user.role })
+			.select({ role: user.role, voidStatus: user.voidStatus })
 			.from(user)
 			.where(eq(user.id, userId))
 			.limit(1);
@@ -363,19 +356,28 @@ export const actions: Actions = {
 		if (access.role === 'admin' && target.role === 'superadmin')
 			return fail(403, { error: 'Admin tidak dapat mengubah status akun superadmin.' });
 
+		// Pastikan status yang dikirim masih sesuai dengan status database.
+		if (String(target.voidStatus) !== currentVoidStatus) {
+			return fail(409, {
+				error: 'Status pengguna sudah berubah. Silakan muat ulang halaman.'
+			});
+		}
+
+		const newVoidStatus = target.voidStatus === 1 ? 0 : 1;
+
 		try {
 			await db.transaction(async (tx) => {
 				await tx
 					.update(user)
 					.set({
-						voidStatus: status,
-						accountStatus: status === 1 ? 'inactive' : 'active',
+						voidStatus: newVoidStatus,
+						accountStatus: newVoidStatus === 1 ? 'inactive' : 'active',
 						voidByUserid: locals.legacyUserId ?? 0,
 						voidDate: new Date(),
 						updatedAt: new Date()
 					})
 					.where(eq(user.id, userId));
-				if (status === 1) await tx.delete(session).where(eq(session.userId, userId));
+				if (newVoidStatus === 1) await tx.delete(session).where(eq(session.userId, userId));
 			});
 		} catch (cause) {
 			console.error('Gagal mengubah status pengguna', cause);
