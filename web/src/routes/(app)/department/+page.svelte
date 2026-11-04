@@ -1,5 +1,9 @@
 <script lang="ts">
+	import { cn } from '$lib/utils';
+
 	let { data, form } = $props();
+
+	let openRow = $state<{ id: string; panel: 'edit' } | null>(null);
 
 	const field =
 		'mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary';
@@ -11,6 +15,21 @@
 				Math.abs(page - data.pagination.page) <= 1
 		)
 	);
+
+	function statusBadge(status: number | null | undefined) {
+		if (status === 1) {
+			return { 'label': 'Nonaktif', class: 'bg-red-100 text-red-800' };
+		}
+		return { 'label': 'Aktif', class: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' };
+	}
+
+	function toggleRow(id: string, panel: 'edit') {
+		if (openRow?.id === id && openRow?.panel === panel) {
+			openRow = null;
+		} else {
+			openRow = { id, panel };
+		}
+	}
 
 	function pageHref(page: number) {
 		const params = new URLSearchParams();
@@ -98,9 +117,132 @@
 						>{/if}
 				</form>
 			</div>
+			<div class="overflow-x-auto bg-card">
+				<table class="w-full bg-card text-sm">
+					<thead class="border-b bg-muted text-xs text-muted-foreground">
+						<tr>
+							<th class="px-4 py-2 text-left font-medium">Nama Departement</th>
+							<th class="px-4 py-2 text-left font-medium">GM</th>
+							<th class="px-4 py-2 text-left font-medium">SPI</th>
+							<th class="px-4 py-2 text-left font-medium">Status</th>
+							<th class="px-4 py-2 text-left font-medium">Aksi</th>
+						</tr>
+					</thead>                 
+					<tbody class="divide-y">
+						{#each data.departments as department (department.id)}
+							{@const status = statusBadge(department.voidStatus)}
+							{@const isOpen = openRow?.id === department.id}
+							<tr class={cn('bg-card transition hover:bg-muted', isOpen && 'bg-muted')}>
+								<td class="px-4 py-2">{department.nama_departement}</td>
+								<td class="px-4 py-2">{department.nama_gm}</td>
+								<td class="px-4 py-2">{department.nama_spi}</td>
+								<td class="px-4 py-2">  
+									<span class={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${status.class}`}>
+										{status.label} 
+									</span>
+								</td>
+								<td class="px-4 py-2">
+									<button
+										class="rounded-lg border px-3 py-1 text-sm font-medium transition hover:bg-muted"
+										type="button"
+										aria-expanded={isOpen && openRow?.panel === 'edit'}
+										onclick={() => toggleRow(department.id, 'edit')}
+									>
+										Edit
+									</button>
+								</td>
+							</tr>
+							{#if isOpen && openRow?.panel === 'edit'}
+								<tr class="bg-muted">
+									<td colspan="5" class="px-4 py-2">
+										<form
+											method="POST"
+											action="?/update"
+											class="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end"
+										>
+											<input type="hidden" name="departmentId" value={department.id} />
+											<label class="text-sm font-medium">
+												Nama Departement
+												<input
+													class={field}
+													name="nama_departement"
+													value={department.nama_departement}
+													required
+												/>
+											</label>
+											<label class="text-sm font-medium">
+												GM
+												<select class={field} name="userid_head" value={department.userid_head ?? ''}>
+													<option value="">- Pilih GM -</option>
+													{#each data.users as user (user.legacyId)}
+														<option value={user.legacyId}>{user.name}</option>
+													{/each}
+												</select>
+											</label>
+											<label class="text-sm font-medium">
+												SPI
+												<select class={field} name="userid_spi" value={department.userid_spi ?? ''}>
+													<option value="">- Pilih SPI -</option>
+													{#each data.users as user (user.legacyId)}
+														<option value={user.legacyId}>{user.name}</option>
+													{/each}
+												</select>
+											</label>
+											<!-- <label class="text-sm font-medium">
+												Status
+												<select
+													class={field}
+													name="void_status"
+													value={String(department.voidStatus)}
+													required
+												>
+													<option value="0">Aktif</option>
+													<option value="1">Nonaktif</option>
+												</select>
+											</label> -->
+											<div class="flex items-center gap-2 md:col-span-2 xl:col-span-5">
+												<button
+												class="rounded-lg border px-4 py-2 text-sm font-medium transition bg-primary hover:bg-primary/90 text-primary-foreground"
+												type="submit">Simpan</button
+												>
+												<button
+													class="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+													type="button"
+													onclick={() => (openRow = null)}>Batal</button
+												>
 
-			<div class="divide-y">
-				{#each data.departments as department (department.id)}
+												<input type="hidden" name="departementId" value={department.id} />
+
+												<button
+													class={cn(
+														'ml-auto rounded-lg px-4 py-2 text-sm font-medium transition',
+														department.voidStatus === 0
+															? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
+															: 'bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/20 dark:text-emerald-400'
+													)}
+													type="submit"
+													name="status"
+													value={department.voidStatus === 1 ? '1' : '0'}
+													formaction="?/toggleStatus"
+													formnovalidate
+												>
+													{department.voidStatus === 1 ? 'Aktifkan' : 'Nonaktifkan'}
+												</button>	
+											</div>
+										</form>
+									</td>
+								</tr>
+							{/if}
+						{:else}
+							<p class="px-5 py-10 text-center text-sm text-muted-foreground">
+								Tidak ada departemen yang cocok.
+							</p>
+						{/each}
+					</tbody>
+				</table>
+				
+
+				<!-- {#each data.departments as department (department.id)}
 					<div class="p-5 md:px-6">
 						<form
 							method="POST"
@@ -158,7 +300,7 @@
 						Tidak ada departemen yang cocok.
 					</p>
 				{/each}
-			</div>
+			</div> -->
 
 			{#if data.pagination.totalPages > 1}
 				<nav

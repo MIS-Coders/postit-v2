@@ -1,7 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { sql } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
 
 import { db } from '$lib/server/db';
+import { departement } from '$lib/server/db/schema';
 import { requireRole } from '$lib/server/roles';
 
 import type { Actions, PageServerLoad } from './$types';
@@ -157,7 +158,6 @@ export const actions: Actions = {
 		const namaDepartement = value(form, 'nama_departement');
 		const useridHead = Number(value(form, 'userid_head'));
 		const useridSpi = Number(value(form, 'userid_spi'));
-		const rawStatus = value(form, 'void_status');
 
 		if (
 			!Number.isSafeInteger(departmentId) ||
@@ -166,8 +166,7 @@ export const actions: Actions = {
 			!Number.isSafeInteger(useridHead) ||
 			useridHead <= 0 ||
 			!Number.isSafeInteger(useridSpi) ||
-			useridSpi <= 0 ||
-			(rawStatus !== '0' && rawStatus !== '1')
+			useridSpi <= 0
 		) {
 			return fail(400, { error: 'Data departemen tidak valid.' });
 		}
@@ -194,7 +193,6 @@ export const actions: Actions = {
 			return fail(404, { error: 'SPI yang dipilih tidak ditemukan.' });
 		}
 
-		const status = Number(rawStatus);
 		const userId = locals.legacyUserId ?? 0;
 
 		const result = await db.execute(sql`
@@ -203,15 +201,8 @@ export const actions: Actions = {
 				nama_departement = ${namaDepartement},
 				userid_head = ${useridHead},
 				userid_spi = ${useridSpi},
-				void_status = ${status},
-				void_by_userid = CASE
-					WHEN ${status} = 1 THEN ${userId}
-					ELSE void_by_userid
-				END,
-				void_date = CASE
-					WHEN ${status} = 1 THEN COALESCE(void_date, CURRENT_TIMESTAMP)
-					ELSE NULL
-				END
+				edit_by_userid = ${userId},
+				edit_date = CURRENT_TIMESTAMP
 			WHERE id = ${departmentId}
 			RETURNING id
 		`);
@@ -221,5 +212,50 @@ export const actions: Actions = {
 		}
 
 		throw redirect(303, `${url.pathname}${url.search}`);
+	},
+
+	toggleStatus: async ({ request, locals, url }) => {
+		await requireRole(locals, ['admin', 'superadmin']);
+		const form = await request.formData();
+		const departementId = value(form, 'departementId');
+		const currentVoidStatus = value(form, 'status');
+
+		if (!departementId) return fail(400, { error: 'Departemen tidak ditemukan.' });
+		if (!['0', '1'].includes(currentVoidStatus)) return fail(400, { error: 'Status departemen tidak valid.' });
+
+		const [target] = await db
+			.select({ id: departement.id, voidStatus: departement.voidStatus })
+			.from(departement)
+			.where(eq(departement.id, departementId))
+			.limit(1);
+		if (!target) return fail(404, { error: 'Departemen tidak ditemukan.' });
+
+		// Pastikan status yang dikirim masih sesuai dengan status database.
+		if (String(target.voidStatus) !== currentVoidStatus) {
+			return fail(409, {
+				error: 'Status departemen sudah berubah. Silakan muat ulang halaman.'
+			});
+		}
+
+		const newVoidStatus = target.voidStatus === 1 ? 0 : 1;
+
+		try {
+			await db.transaction(async (tx) => {
+				await tx
+					.update(departement)
+					.set({
+						voidStatus: newVoidStatus,
+						departementStatus: newVoidStatus === 1 ? 'inactive' : 'active',
+						voidByUserid: locals.legacyUserId ?? 0,
+						voidDate: new Date(),
+						updatedAt: new Date()
+					})
+					.where(eq(departement.id, departementId));
+			});
+		} catch (cause) {
+			console.error('Gagal mengubah status departemen', cause);
+			return fail(500, { error: 'Status departemen gagal diubah. Silakan coba kembali.' });
+		}
+		redirect(303, `${url.pathname}${url.search}`);
 	}
 };
