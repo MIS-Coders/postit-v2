@@ -54,7 +54,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		LIMIT ${pageSize}
 		OFFSET ${offset}
 	`);
-
+	
 	const users = await db.execute(sql`
 		SELECT DISTINCT
 			legacy_id AS legacy_id,
@@ -64,10 +64,36 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		ORDER BY name ASC
 	`);
 
+	const gmUsers = await db.execute(sql`
+		SELECT DISTINCT
+			legacy_id AS legacy_id,
+			name AS name
+		FROM public."user" u JOIN public.level l on l.id = u.id_level
+		WHERE legacy_id IS NOT NULL AND l.nama_level = 'General Manager / Head'
+		ORDER BY name ASC
+	`);
+
+	const spiUsers = await db.execute(sql`
+		SELECT DISTINCT 
+			legacy_id AS legacy_id,
+			name AS name
+		FROM public."user" u JOIN public.level l on l.id = u.id_level
+		WHERE legacy_id IS NOT NULL AND l.nama_level = 'Superintendent / Manager'
+		ORDER BY name ASC
+	`);
+
 	return {
 		...access,
 		search,
 		users: users.map((row) => ({
+			legacyId: Number(row.legacy_id),
+			name: String(row.name ?? '-')
+		})),
+		gmUsers: gmUsers.map((row) => ({
+			legacyId: Number(row.legacy_id),
+			name: String(row.name ?? '-')
+		})),
+		spiUsers: spiUsers.map((row) => ({
 			legacyId: Number(row.legacy_id),
 			name: String(row.name ?? '-')
 		})),

@@ -50,7 +50,7 @@
 					GM
 					<select class={field} name="userid_head" required>
 						<option value="">- Pilih GM -</option>
-						{#each data.users as user (user.legacyId)}
+						{#each data.gmUsers as user (user.legacyId)}
 							<option value={user.legacyId}>{user.name}</option>
 						{/each}
 					</select>
@@ -59,7 +59,7 @@
 					SPI
 					<select class={field} name="userid_spi" required>
 						<option value="">- Pilih SPI -</option>
-						{#each data.users as user (user.legacyId)}
+						{#each data.spiUsers as user (user.legacyId)}
 							<option value={user.legacyId}>{user.name}</option>
 						{/each}
 					</select>
