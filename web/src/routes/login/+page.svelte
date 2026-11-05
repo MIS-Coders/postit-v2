@@ -13,7 +13,7 @@
 
 <svelte:head><title>Masuk · PostIt MIS</title></svelte:head>
 
-<main class="min-h-dvh bg-[#f5f7f4] p-3 md:p-5">
+<main class="min-h-dvh bg-[#f5f7f4] p-3 md:p-5 font-sans">
 	<div
 		class="mx-auto grid min-h-[calc(100dvh-1.5rem)] max-w-[1500px] overflow-hidden rounded-[2rem] border border-emerald-950/10 bg-white shadow-2xl shadow-emerald-950/10 md:min-h-[calc(100dvh-2.5rem)] lg:grid-cols-[1.08fr_0.92fr]"
 	>

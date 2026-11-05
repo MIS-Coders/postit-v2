@@ -7,7 +7,7 @@
 
 <svelte:head><title>PostIt MIS</title></svelte:head>
 
-<main class="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#f5f8f5] px-4 py-10 text-foreground">
+<main class="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#f5f8f5] px-4 py-10 font-sans text-foreground">
 	<div class="pointer-events-none absolute -top-40 -left-32 size-96 rounded-full bg-emerald-300/20 blur-3xl"></div>
 	<div class="pointer-events-none absolute -right-32 -bottom-40 size-[30rem] rounded-full bg-amber-300/20 blur-3xl"></div>
 
