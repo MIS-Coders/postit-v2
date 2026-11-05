@@ -59,6 +59,7 @@ export async function listDepartmentsFromDb(): Promise<Departement[]> {
 				id AS id,
 				nama_departement AS nama_departement
 			FROM public.departement
+			WHERE void_status = 0
 			ORDER BY id ASC
 		`);
 
