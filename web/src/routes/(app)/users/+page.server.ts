@@ -95,6 +95,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const departments = await db
 		.select({ id: departement.id, namaDepartement: departement.namaDepartement })
 		.from(departement)
+		.where(eq(departement.voidStatus, 0))
 		.orderBy(departement.namaDepartement);
 	const levels = await db
 		.select({ id: level.id, namaLevel: level.namaLevel })
