@@ -2,7 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { sql, eq, asc, ilike, or, count } from 'drizzle-orm';
 
 import { db } from '$lib/server/db';
-import { user, sbu} from '$lib/server/db/schema';
+import { user, sbu, level} from '$lib/server/db/schema';
 import { requireRole } from '$lib/server/roles';
 
 import type { Actions, PageServerLoad } from './$types';
@@ -49,9 +49,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         .offset(offset);
 
     const users = await db.select({ legacyId: user.legacyId, name: user.name }).from(user).orderBy(user.name);
+    const gmUsers = await db.select({ legacyId: user.legacyId, name: user.name }).from(user).innerJoin(level, eq(user.idLevel, level.id)).where(eq(level.namaLevel, 'General Manager / Head')).orderBy(user.name);
     return {
         ...access,
         users,
+        gmUsers,
         search,
         sbu: rows.map((row) => ({
             id: Number(row.id),

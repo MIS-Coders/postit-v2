@@ -64,7 +64,7 @@
 					GM SBU
 					<select class={field} name="gmsbu_id" required>
 						<option value="">Pilih GM</option>
-						{#each data.users as user}<option value={user.legacyId}
+						{#each data.gmUsers as user}<option value={user.legacyId}
 								>{user.name}</option
 							>{/each}
 					</select>
