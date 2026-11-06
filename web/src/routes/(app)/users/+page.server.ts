@@ -100,6 +100,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const levels = await db
 		.select({ id: level.id, namaLevel: level.namaLevel })
 		.from(level)
+		.where(eq(level.voidStatus, 0))
 		.orderBy(level.namaLevel);
 
 	return {
