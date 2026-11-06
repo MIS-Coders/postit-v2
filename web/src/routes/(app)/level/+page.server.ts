@@ -1,7 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { sql } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
 
 import { db } from '$lib/server/db';
+import { level} from '$lib/server/db/schema';
 import { requireRole } from '$lib/server/roles';
 
 import type { Actions, PageServerLoad } from './$types';
@@ -39,7 +40,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         SELECT
             d.id AS id,
             d.nama_level AS nama_level, 
-            d.input_date AS input_date
+            d.input_date AS input_date,
+            d.void_status AS void_status
         FROM public.level d
         ${searchClause}
         ORDER BY d.nama_level ASC
@@ -53,7 +55,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         levels: rows.map((row) => ({
             id: Number(row.id),
             nama_level: String(row.nama_level ?? '-'),
-            inputDate: row.input_date ? String(row.input_date) : null
+            inputDate: row.input_date ? String(row.input_date) : null,
+            voidStatus: Number(row.void_status ?? 0)
         })),
         pagination: { page, pageSize, total, totalPages }
     };
@@ -109,37 +112,90 @@ export const actions: Actions = {
         throw redirect(303, `${url.pathname}${url.search}`);
     },
 
-    delete: async ({ request, locals, url }) => {
+    toggleStatus: async ({ request, locals, url }) => {
         await requireRole(locals, ['admin', 'superadmin']);
-        const levelId = value(await request.formData(), 'levelId');
-        if (!levelId) return fail(400, { error: 'Level tidak ditemukan.' })
+        const form = await request.formData();
+        const levelId = Number(value(form, 'levelId'));
+        const currentVoidStatus = value(form, 'status');
 
-        // Jangan hapus level yang masih digunakan pengguna.
-        const [usage] = await db.execute(sql`
-            SELECT COUNT(*)::int AS total
-            FROM public."user"
-            WHERE id_level = ${levelId}
-        `);
+        if (!Number.isInteger(levelId)) {
+            return fail(400, { error: 'Level tidak ditemukan.' });
+        }
 
-        if (Number(usage?.total ?? 0) > 0) {
-            return fail(409, {
-                error: 'Level tidak dapat dihapus karena masih digunakan oleh pengguna.'
-            });
+        if (!['0', '1'].includes(currentVoidStatus)) {
+            return fail(400, { error: 'Status level tidak valid.' });
+        }
+
+        const [target] = await db
+            .select({ id: level.id, voidStatus: level.voidStatus })
+            .from(level)
+            .where(eq(level.id, levelId))
+            .limit(1);
+
+        if (!target) {
+            return fail(404, { error: 'Level tidak ditemukan.' });
+        }
+
+        if (String(target.voidStatus) !== currentVoidStatus) {
+            return fail(409, { error: 'Status level telah berubah. Silakan muat ulang halaman.' });
+        }
+
+        const newVoidStatus = target.voidStatus === 1 ? 0 : 1;
+        const userId = locals.legacyUserId ?? 0;
+
+        if (!userId) {
+            return fail(401, { error: 'ID pengguna yang login tidak ditemukan.' });
         }
 
         try {
-            await db.execute(sql`
-                DELETE FROM public.level
-                WHERE id = ${levelId}
-            `);
-        } catch (error) {
-            console.error('Gagal menghapus level:', error);
-
-            return fail(500, {
-                error: 'Level gagal dihapus. Periksa apakah level masih digunakan oleh data lain.'
+            await db.transaction(async (tx) => {
+                await tx
+                    .update(level)
+                    .set({ 
+                        voidStatus: newVoidStatus, 
+                        voidByUserid: userId, 
+                        voidDate: new Date() 
+                    })
+                    .where(eq(level.id, levelId));
             });
+        } catch (error) {
+            console.error('Gagal mengubah status level:', error);
+            return fail(500, { error: 'Gagal mengubah status level. Silakan coba lagi.' });
         }
-
         throw redirect(303, `${url.pathname}${url.search}`);
     }
+
+    // delete: async ({ request, locals, url }) => {
+    //     await requireRole(locals, ['admin', 'superadmin']);
+    //     const levelId = value(await request.formData(), 'levelId');
+    //     if (!levelId) return fail(400, { error: 'Level tidak ditemukan.' })
+
+    //     // Jangan hapus level yang masih digunakan pengguna.
+    //     const [usage] = await db.execute(sql`
+    //         SELECT COUNT(*)::int AS total
+    //         FROM public."user"
+    //         WHERE id_level = ${levelId}
+    //     `);
+
+    //     if (Number(usage?.total ?? 0) > 0) {
+    //         return fail(409, {
+    //             error: 'Level tidak dapat dihapus karena masih digunakan oleh pengguna.'
+    //         });
+    //     }
+
+    //     try {
+    //         await db.execute(sql`
+    //             DELETE FROM public.level
+    //             WHERE id = ${levelId}
+    //         `);
+    //     } catch (error) {
+    //         console.error('Gagal menghapus level:', error);
+
+    //         return fail(500, {
+    //             error: 'Level gagal dihapus. Periksa apakah level masih digunakan oleh data lain.'
+    //         });
+    //     }
+
+    //     throw redirect(303, `${url.pathname}${url.search}`);
+    // }
 };
