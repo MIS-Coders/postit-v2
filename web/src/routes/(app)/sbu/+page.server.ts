@@ -39,7 +39,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
             nama_sbu: sbu.namaSbu,
             input_date: sbu.inputDate,
             userid_sbu: sbu.useridSbu,
-            gm_sbu: user.name
+            gm_sbu: user.name,
+            voidStatus: sbu.voidStatus
         })
         .from(sbu)
         .leftJoin(user, eq(sbu.useridSbu, user.legacyId))
@@ -60,7 +61,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
             nama_sbu: String(row.nama_sbu ?? '-'),
             inputDate: row.input_date ? String(row.input_date) : null,
             userid_sbu: row.userid_sbu ?? null,
-            gm_sbu: row.gm_sbu ?? null
+            gm_sbu: row.gm_sbu ?? null,
+            voidStatus: Number(row.voidStatus ?? 0)
         })),
         pagination: { page, pageSize, total, totalPages }
     };
@@ -118,37 +120,90 @@ export const actions: Actions = {
         throw redirect(303, `${url.pathname}${url.search}`);
     },
 
-    delete: async ({ request, locals, url }) => {
+    toggleStatus: async ({ request, locals, url }) => {
         await requireRole(locals, ['admin', 'superadmin']);
-        const sbuId = value(await request.formData(), 'sbuId');
-        if (!sbuId) return fail(400, { error: 'SBU tidak ditemukan.' })
+        const form = await request.formData();
+        const sbuId = Number(value(form, 'sbuId'));
+        const currentVoidStatus = value(form, 'status');
 
-        // Jangan hapus sbu yang masih digunakan pengguna.
-        const [usage] = await db.execute(sql`
-            SELECT COUNT(*)::int AS total
-            FROM public."user"
-            WHERE id_sbu = ${sbuId}
-        `);
+        if (!Number.isInteger(sbuId)) {
+            return fail(400, { error: 'SBU tidak ditemukan.' });
+        }
 
-        if (Number(usage?.total ?? 0) > 0) {
-            return fail(409, {
-                error: 'SBU tidak dapat dihapus karena masih digunakan oleh pengguna.'
-            });
+        if (!['0', '1'].includes(currentVoidStatus)) {
+            return fail(400, { error: 'Status SBU tidak valid.' });
+        }
+
+        const [target] = await db
+            .select({ id: sbu.id, voidStatus: sbu.voidStatus })
+            .from(sbu)
+            .where(eq(sbu.id, sbuId))
+            .limit(1);
+
+        if (!target) {
+            return fail(404, { error: 'SBU tidak ditemukan.' });
+        }
+
+        if (String(target.voidStatus) !== currentVoidStatus) {
+            return fail(409, { error: 'Status SBU telah berubah. Silakan muat ulang halaman.' });
+        }
+
+        const newVoidStatus = target.voidStatus === 1 ? 0 : 1;
+        const userId = locals.legacyUserId ?? 0;
+
+        if (!userId) {
+            return fail(401, { error: 'ID pengguna yang login tidak ditemukan.' });
         }
 
         try {
-            await db.execute(sql`
-                DELETE FROM public.sbu
-                WHERE id = ${sbuId}
-            `);
-        } catch (error) {
-            console.error('Gagal menghapus sbu:', error);
-
-            return fail(500, {
-                error: 'SBU gagal dihapus. Periksa apakah SBU masih digunakan oleh data lain.'
+            await db.transaction(async (tx) => {
+                await tx
+                    .update(sbu)
+                    .set({ 
+                        voidStatus: newVoidStatus, 
+                        voidByUserid: userId, 
+                        voidDate: new Date() 
+                    })
+                    .where(eq(sbu.id, sbuId));
             });
+        } catch (error) {
+            console.error('Gagal mengubah status SBU:', error);
+            return fail(500, { error: 'Gagal mengubah status SBU. Silakan coba lagi.' });
         }
-
         throw redirect(303, `${url.pathname}${url.search}`);
     }
+
+    // delete: async ({ request, locals, url }) => {
+    //     await requireRole(locals, ['admin', 'superadmin']);
+    //     const sbuId = value(await request.formData(), 'sbuId');
+    //     if (!sbuId) return fail(400, { error: 'SBU tidak ditemukan.' })
+
+    //     // Jangan hapus sbu yang masih digunakan pengguna.
+    //     const [usage] = await db.execute(sql`
+    //         SELECT COUNT(*)::int AS total
+    //         FROM public."user"
+    //         WHERE id_sbu = ${sbuId}
+    //     `);
+
+    //     if (Number(usage?.total ?? 0) > 0) {
+    //         return fail(409, {
+    //             error: 'SBU tidak dapat dihapus karena masih digunakan oleh pengguna.'
+    //         });
+    //     }
+
+    //     try {
+    //         await db.execute(sql`
+    //             DELETE FROM public.sbu
+    //             WHERE id = ${sbuId}
+    //         `);
+    //     } catch (error) {
+    //         console.error('Gagal menghapus sbu:', error);
+
+    //         return fail(500, {
+    //             error: 'SBU gagal dihapus. Periksa apakah SBU masih digunakan oleh data lain.'
+    //         });
+    //     }
+
+    //     throw redirect(303, `${url.pathname}${url.search}`);
+    // }
 };

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { cn } from '$lib/utils';
+
 	let { data, form } = $props();
 
 	const field =
@@ -137,7 +139,7 @@
 								>
 							</form>
 						
-							<form method="POST" action="?/delete" class="contents" onsubmit={(event) => {
+							<!-- <form method="POST" action="?/delete" class="contents" onsubmit={(event) => {
 								if (!confirm(`Yakin ingin menghapus sbu "${sbu.nama_sbu}"?`)) {
 									event.preventDefault();
 								}
@@ -147,7 +149,28 @@
 									class="rounded-lg border px-4 py-2 text-sm font-medium text-destructive transition hover:underline"
 									type="submit">Hapus SBU</button
 								>
-							</form>	
+							</form>	 -->
+							<form method="POST" action="?/toggleStatus" class="contents" onsubmit={(event) => {
+								if (!confirm(`Yakin ingin "${sbu.voidStatus === 1 ? 'mengaktifkan' : 'menonaktifkan'}" sbu "${sbu.nama_sbu}"?`)) {
+									event.preventDefault();
+								}
+							}}>
+								<input type="hidden" name="sbuId" value={sbu.id} />
+								<button
+									class={cn(
+										'ml-auto rounded-lg px-4 py-2 text-sm font-medium transition',
+										sbu.voidStatus === 0
+											? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
+											: 'bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/20 dark:text-emerald-400'
+									)}
+									type="submit"
+									name="status"
+									value={sbu.voidStatus === 1 ? '1' : '0'}
+									formnovalidate
+								>
+									{sbu.voidStatus === 1 ? 'Aktifkan' : 'Nonaktifkan'}
+								</button>	
+							</form>
 						</div>
 						<div class="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
 							<span>Dibuat {formattedDate(sbu.inputDate)}</span>
