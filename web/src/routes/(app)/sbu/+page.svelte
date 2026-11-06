@@ -115,7 +115,7 @@
 								action="?/update"
 								class="contents"
 							>
-								<input type="hidden" name="sbuid" value={sbu.id} />
+								<input type="hidden" name="sbuId" value={sbu.id} />
 								<label class="text-sm font-medium">
 									Nama SBU
 									<input

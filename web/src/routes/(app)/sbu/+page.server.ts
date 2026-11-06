@@ -99,7 +99,7 @@ export const actions: Actions = {
     update: async ({ request, locals, url }) => {
         await requireRole(locals, ['admin', 'superadmin']);
         const form = await request.formData();
-        const sbuId = Number.parseInt(value(form, 'sbuid'), 10);
+        const sbuId = Number(value(form, 'sbuId'));
         const namaSbu = value(form, 'nama_sbu');
         const gmsbuId = value(form, 'gmsbu_id');
         const updateBy = locals.legacyUserId ?? 0;
