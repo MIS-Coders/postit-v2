@@ -91,7 +91,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.limit(pageSize)
 		.offset((page - 1) * pageSize);
 
-	const sbus = await db.select({ id: sbu.id, namaSbu: sbu.namaSbu }).from(sbu).orderBy(sbu.namaSbu);
+	const sbus = await db.select({ id: sbu.id, namaSbu: sbu.namaSbu }).from(sbu).where(eq(sbu.voidStatus, 0)).orderBy(sbu.namaSbu);
 	const departments = await db
 		.select({ id: departement.id, namaDepartement: departement.namaDepartement })
 		.from(departement)
