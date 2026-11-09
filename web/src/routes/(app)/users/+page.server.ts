@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { hashPassword } from 'better-auth/crypto';
-import { and, count, desc, eq, ilike, ne, or } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, ne, or, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 
 import { db } from '$lib/server/db';
@@ -167,19 +167,21 @@ export const actions: Actions = {
 		if (existingUsername) return fail(409, { error: 'Username tersebut sudah digunakan.' });
 
 		const userId = randomUUID();
+		const legacyId = await db.select({ maxId: sql`MAX(${user.legacyId})` }).from(user).then(([row]) => row.maxId + 1);
 		const passwordHash = await hashPassword(password);
 		try {
 			await db.transaction(async (tx) => {
 				await tx.insert(user).values({
 					id: userId,
-					nik,
-					name,
+					legacyId: legacyId,
+					nik:nik,
+					name: name,
 					idSbu: sbuId,
 					idDepartement: departementId,
 					idLevel: levelId,
-					username,
-					email,
-					role,
+					username:username,
+					email: email,
+					role: role,
 					inputByUserid: locals.legacyUserId ?? 0,
 					inputDate: new Date(),
 					voidStatus: 0,
