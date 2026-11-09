@@ -60,4 +60,27 @@ describe('reset password di daftar pengguna', () => {
 		render(UsersPage, { data, form: { success: 'Password Budi berhasil direset.' } } as never);
 		await expect.element(page.getByText('Password Budi berhasil direset.')).toBeVisible();
 	});
+
+	it('shows a generated temporary password only to superadmins', async () => {
+		render(UsersPage, {
+			data: {
+				...data,
+				userId: 'super-1',
+				role: 'superadmin',
+				users: [person('budi', 'Budi')],
+				assignableRoles: data.allRoles
+			},
+			form: null
+		} as never);
+		await page.getByRole('button', { name: 'Reset password' }).click();
+
+		const password = page.getByLabelText('Password sementara untuk Budi');
+		await expect.element(password).toHaveAttribute('type', 'text');
+		await expect.element(password).toHaveAttribute('readonly');
+		expect((password.element() as HTMLInputElement).value).toMatch(
+			/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%&*?]).{14}$/
+		);
+		await expect.element(page.getByRole('button', { name: 'Salin' })).toBeVisible();
+		await expect.element(page.getByRole('button', { name: 'Buat ulang' })).toBeVisible();
+	});
 });

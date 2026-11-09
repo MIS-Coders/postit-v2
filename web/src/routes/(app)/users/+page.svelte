@@ -9,17 +9,52 @@
 	let openRow = $state<{ id: string; panel: 'edit' | 'reset' } | null>(null);
 	let newUserPassword = $state('');
 	let resetPassword = $state('');
+	let passwordCopied = $state(false);
 
 	const field =
 		'mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary';
 
-	function formattedDate(date: Date | string) {
+	function formattedDate(date: Date | string | null) {
+		if (!date) return '-';
 		return new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(new Date(date));
 	}
 
 	function toggleRow(id: string, panel: 'edit' | 'reset') {
 		openRow = openRow?.id === id && openRow.panel === panel ? null : { id, panel };
-		resetPassword = '';
+		resetPassword = panel === 'reset' && data.role === 'superadmin' ? temporaryPassword() : '';
+		passwordCopied = false;
+	}
+
+	function temporaryPassword() {
+		const required = [
+			'ABCDEFGHJKLMNPQRSTUVWXYZ',
+			'abcdefghijkmnopqrstuvwxyz',
+			'23456789',
+			'!@#$%&*?'
+		];
+		const all = required.join('');
+		const randomIndex = (length: number) => {
+			const values = new Uint32Array(1);
+			crypto.getRandomValues(values);
+			return values[0] % length;
+		};
+		const characters = required.map((set) => set[randomIndex(set.length)]);
+		while (characters.length < 14) characters.push(all[randomIndex(all.length)]);
+		for (let index = characters.length - 1; index > 0; index--) {
+			const swap = randomIndex(index + 1);
+			[characters[index], characters[swap]] = [characters[swap], characters[index]];
+		}
+		return characters.join('');
+	}
+
+	function regeneratePassword() {
+		resetPassword = temporaryPassword();
+		passwordCopied = false;
+	}
+
+	async function copyPassword() {
+		await navigator.clipboard.writeText(resetPassword);
+		passwordCopied = true;
 	}
 
 	function statusBadge(status: string | null | undefined) {
@@ -367,7 +402,7 @@
 														}}>Hapus pengguna</button
 													>
 												{/if} -->
-												
+
 												{#if account.id !== data.userId}
 													<input type="hidden" name="userId" value={account.id} />
 
@@ -385,7 +420,7 @@
 														formnovalidate
 													>
 														{account.accountStatus === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
-													</button>				
+													</button>
 												{/if}
 											</div>
 										</form>
@@ -400,28 +435,51 @@
 											class="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-[20rem_minmax(0,1fr)] md:gap-x-6"
 										>
 											<input type="hidden" name="userId" value={account.id} />
-											<label class="text-sm font-medium"
-												>Password sementara untuk {account.name}<input
-													class={field}
-													name="password"
-													type="password"
-													minlength="8"
-													autocomplete="new-password"
-													aria-describedby="reset-password-strength"
-													bind:value={resetPassword}
-													required
-												/></label
-											>
+											<label class="text-sm font-medium">
+												Password sementara untuk {account.name}
+												<div class="mt-1 flex gap-2">
+													<input
+														class="w-full rounded-lg border bg-background px-3 py-2 font-mono text-sm outline-none focus:border-primary"
+														name="password"
+														type={data.role === 'superadmin' ? 'text' : 'password'}
+														minlength="8"
+														autocomplete="new-password"
+														aria-describedby="reset-password-strength"
+														bind:value={resetPassword}
+														readonly={data.role === 'superadmin'}
+														required
+													/>
+													{#if data.role === 'superadmin'}
+														<button
+															class="rounded-lg border px-3 py-2 text-xs font-medium transition hover:bg-muted"
+															type="button"
+															onclick={copyPassword}>{passwordCopied ? 'Tersalin' : 'Salin'}</button
+														>
+													{/if}
+												</div>
+											</label>
 											<PasswordStrength
 												id="reset-password-strength"
 												password={resetPassword}
 												class="md:pt-6"
 											/>
 											<p class="text-xs text-muted-foreground md:self-center">
-												Sesi pengguna akan diakhiri dan ia wajib membuat password baru saat login
-												berikutnya.
+												{#if data.role === 'superadmin'}
+													Password lama tidak dapat dilihat. Salin password sementara ini dan
+													berikan kepada pengguna.
+												{:else}
+													Sesi pengguna akan diakhiri dan ia wajib membuat password baru saat login
+													berikutnya.
+												{/if}
 											</p>
 											<div class="flex gap-2 md:justify-end">
+												{#if data.role === 'superadmin'}
+													<button
+														class="rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+														type="button"
+														onclick={regeneratePassword}>Buat ulang</button
+													>
+												{/if}
 												<button
 													class="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
 													type="button"
