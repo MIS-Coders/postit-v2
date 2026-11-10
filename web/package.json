@@ -68,6 +68,7 @@
 		"@ai-sdk/svelte": "^5.0.102",
 		"ai": "^7.0.102",
 		"marked": "^18.0.13",
-		"pdfjs-dist": "^6.3.289"
+		"pdfjs-dist": "^6.3.289",
+		"sweetalert2": "^11.26.24"
 	}
 }
