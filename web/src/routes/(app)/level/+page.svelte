@@ -195,7 +195,7 @@
 								<input type="hidden" name="status" value={level.voidStatus === 1 ? '1' : '0'} />
 								<button
 									class={cn(
-										'ml-auto rounded-lg px-4 py-2 text-sm font-medium transition',
+										'rounded-lg px-4 py-2 text-sm font-medium transition',
 										level.voidStatus === 0
 											? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
 											: 'bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/20 dark:text-emerald-400'
