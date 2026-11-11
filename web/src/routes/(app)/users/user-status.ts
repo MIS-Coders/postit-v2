@@ -10,3 +10,10 @@ export function normalizeVoidStatus(value: string | number | null | undefined): 
 
 	return 0;
 }
+
+export function resolveNextVoidStatus(
+	currentStatus: string | number | null | undefined,
+	_submittedStatus?: string | number | null | undefined
+): 0 | 1 {
+	return normalizeVoidStatus(currentStatus) === 1 ? 0 : 1;
+}

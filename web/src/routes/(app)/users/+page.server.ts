@@ -10,6 +10,7 @@ import { requireRole, roles, type Role } from '$lib/server/roles';
 import { passwordHelp, validPassword } from '$lib/password-policy';
 
 import { parseIdInput } from './user-ids';
+import { resolveNextVoidStatus } from './user-status';
 import type { Actions, PageServerLoad } from './$types';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -360,14 +361,7 @@ export const actions: Actions = {
 		if (access.role === 'admin' && target.role === 'superadmin')
 			return fail(403, { error: 'Admin tidak dapat mengubah status akun superadmin.' });
 
-		// Pastikan status yang dikirim masih sesuai dengan status database.
-		if (String(target.voidStatus) !== currentVoidStatus) {
-			return fail(409, {
-				error: 'Status pengguna sudah berubah. Silakan muat ulang halaman.'
-			});
-		}
-
-		const newVoidStatus = target.voidStatus === 1 ? 0 : 1;
+		const newVoidStatus = resolveNextVoidStatus(target.voidStatus, currentVoidStatus);
 
 		try {
 			await db.transaction(async (tx) => {

@@ -1,6 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { resolveNextVoidStatus } from './user-status';
 import UsersPage from './+page.svelte';
 
 const person = (id: string, name: string) => ({
@@ -37,6 +38,14 @@ const data = {
 	pagination: { page: 1, pageSize: 10, total: 2, totalPages: 1 }
 };
 const resetForms = () => document.querySelectorAll('form[action="?/resetPassword"]').length;
+
+describe('status akun', () => {
+	it('menggunakan database sebagai sumber kebenaran saat form sudah stale', () => {
+		expect(resolveNextVoidStatus(0, '1')).toBe(1);
+		expect(resolveNextVoidStatus(1, '0')).toBe(0);
+		expect(resolveNextVoidStatus(1, '1')).toBe(0);
+	});
+});
 
 describe('reset password di daftar pengguna', () => {
 	it('opens a reset form only for other accounts', async () => {
