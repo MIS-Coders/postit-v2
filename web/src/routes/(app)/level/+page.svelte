@@ -139,11 +139,10 @@
 								const result = await Swal.fire({
 									text: `Yakin ingin ${level.voidStatus === 1 ? 'mengaktifkan' : 'menonaktifkan'} level "${level.nama_level}"?`,
 									showCancelButton: true,
-									cancelButtonText: 'Batal',
 									confirmButtonText: 'Ya',
+									cancelButtonText: 'Batal',
 									confirmButtonColor: '#007a55',
     								cancelButtonColor: '#d33',
-									reverseButtons: true,
 									 customClass: {
 										popup: 'font-sans',
 										title: 'font-sans',
