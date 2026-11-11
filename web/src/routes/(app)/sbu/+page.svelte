@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
+	import { enhance } from '$app/forms';
+	import Swal from 'sweetalert2';
 
 	let { data, form } = $props();
 
@@ -150,10 +152,60 @@
 									type="submit">Hapus SBU</button
 								>
 							</form>	 -->
-							<form method="POST" action="?/toggleStatus" class="contents" onsubmit={(event) => {
-								if (!confirm(`Yakin ingin "${sbu.voidStatus === 1 ? 'mengaktifkan' : 'menonaktifkan'}" sbu "${sbu.nama_sbu}"?`)) {
-									event.preventDefault();
+							<form method="POST" action="?/toggleStatus" class="contents" use:enhance={async ({cancel}) => {
+								const result = await Swal.fire({
+									text: `Yakin ingin ${sbu.voidStatus === 1 ? 'mengaktifkan' : 'menonaktifkan'} sbu "${sbu.nama_sbu}"?`,
+									showCancelButton: true,
+									confirmButtonText: 'Ya',
+									cancelButtonText: 'Batal',
+									confirmButtonColor: '#007a55',
+									cancelButtonColor: '#d33',
+									 customClass: {
+										popup: 'font-sans',
+										title: 'font-sans',
+										htmlContainer: 'font-sans',
+										confirmButton: 'font-sans',
+										cancelButton: 'font-sans'
+									}
+								});
+
+								if (!result.isConfirmed) {
+									cancel();
+									return;
 								}
+
+								return async ({ result: serverResult, update }) => {
+									// Update halaman untuk memuat ulang data terbaru
+									await update();
+
+									// Tampilkan pesan sukses jika respons dari server adalah success atau redirect
+									if (serverResult.type === 'success' || serverResult.type === 'redirect') {
+										Swal.fire({
+											icon: 'success',
+											text: `SBU "${sbu.nama_sbu}" berhasil ${sbu.voidStatus === 1 ? 'diaktifkan' : 'dinonaktifkan'}.`,
+											confirmButtonText: 'OK',
+											confirmButtonColor: '#007a55',
+											customClass: {
+												popup: 'font-sans',
+												title: 'font-sans',
+												htmlContainer: 'font-sans',
+												confirmButton: 'font-sans'
+											}
+										});
+									} else {
+										// Tampilkan pesan error jika server mengembalikan error/failure
+										Swal.fire({
+											title: 'Gagal',
+											text: 'Terjadi kesalahan saat mengubah status.',
+											icon: 'error',
+											customClass: {
+												popup: 'font-sans',
+												title: 'font-sans',
+												htmlContainer: 'font-sans'
+											}
+										});
+									}
+								};
 							}}>
 								<input type="hidden" name="sbuId" value={sbu.id} />
 								<button
