@@ -3,6 +3,8 @@
 	import UsersPagination from '$lib/components/users/users-pagination.svelte';
 	import UsersSubnav from '$lib/components/users/users-subnav.svelte';
 	import { cn } from '$lib/utils';
+	import { enhance } from '$app/forms';
+	import Swal from 'sweetalert2';
 
 	let { data, form } = $props();
 
@@ -363,7 +365,7 @@
 													>
 												{/if} -->
 												
-												{#if account.id !== data.userId}
+												<!-- {#if account.id !== data.userId}
 													<input type="hidden" name="userId" value={account.id} />
 
 													<button
@@ -381,9 +383,84 @@
 													>
 														{account.accountStatus === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
 													</button>				
-												{/if}
+												{/if} -->
 											</div>
 										</form>
+
+										{#if account.id !== data.userId}
+											<form method="POST" action="?/toggleStatus" class="contents" use:enhance={async ({cancel}) => {
+												const result = await Swal.fire({
+													text: `Yakin ingin ${account.voidStatus === 1 ? 'mengaktifkan' : 'menonaktifkan'} pengguna "${account.name}"?`,
+													showCancelButton: true,
+													confirmButtonText: 'Ya',
+													cancelButtonText: 'Batal',
+													confirmButtonColor: '#007a55',
+													cancelButtonColor: '#d33',
+													customClass: {
+														popup: 'font-sans',
+														title: 'font-sans',
+														htmlContainer: 'font-sans',
+														confirmButton: 'font-sans',
+														cancelButton: 'font-sans'
+													}
+												});
+
+												if (!result.isConfirmed) {
+													cancel(); // Cancel the form submission if not confirmed
+													return;
+												}
+
+												return async ({ result: serverResult, update }) => {
+													// Update halaman untuk memuat ulang data terbaru
+													await update();
+
+													// Tampilkan pesan sukses jika respons dari server adalah success atau redirect
+													if (serverResult.type === 'success' || serverResult.type === 'redirect') {
+														Swal.fire({
+															title: 'Berhasil!',
+															text: `Pengguna berhasil ${account.voidStatus === 1 ? 'dinonaktifkan' : 'diaktifkan'}.`,
+															icon: 'success',
+															timer: 1500,
+															showConfirmButton: false,
+															customClass: {
+																popup: 'font-sans',
+																title: 'font-sans',
+																text: 'font-sans',
+																htmlContainer: 'font-sans'
+															}
+														});
+													} else {
+														// Tampilkan pesan error jika server mengembalikan error/failure
+														Swal.fire({
+															title: 'Gagal',
+															text: 'Terjadi kesalahan saat mengubah status.',
+															icon: 'error',
+															customClass: {
+																popup: 'font-sans',
+																title: 'font-sans',
+																htmlContainer: 'font-sans'
+															}
+														});
+													}
+												};
+											}}>
+												<input type="hidden" name="userId" value={account.id} />
+												<input type="hidden" name="status" value={account.voidStatus === 1 ? '1' : '0'} />
+												<button
+													class={cn(
+														'rounded-lg px-4 py-2 text-sm font-medium transition',
+														account.voidStatus === 0
+															? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
+															: 'bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/20 dark:text-emerald-400'
+													)}
+													type="submit"
+													formnovalidate
+												>
+													{account.voidStatus === 1 ? 'Aktifkan' : 'Nonaktifkan'}
+												</button>	
+											</form>			
+										{/if}
+
 									</td>
 								</tr>
 							{:else if isOpen && openRow?.panel === 'reset'}
