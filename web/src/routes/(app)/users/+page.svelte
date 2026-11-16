@@ -265,6 +265,7 @@
 										<form
 											method="POST"
 											action="?/update"
+											id="userForm"
 											class="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-2 md:items-end xl:grid-cols-5"
 										>
 											<input type="hidden" name="userId" value={account.id} />
@@ -340,52 +341,18 @@
 													</select>
 												{/if}
 											</label>
-
-											<div class="flex items-center gap-2 md:col-span-2 xl:col-span-5">
-												<button
-													class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
-													type="submit">Simpan</button
-												>
-												<button
-													class="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
-													type="button"
-													onclick={() => (openRow = null)}>Batal</button
-												>
-												<!-- {#if account.id !== data.userId}
-													<button
-														class="ml-auto rounded-lg px-4 py-2 text-sm font-medium text-destructive transition hover:underline"
-														type="submit"
-														formaction="?/delete"
-														formnovalidate
-														onclick={(event) => {
-															if (!confirm(`Yakin ingin menghapus pengguna "${account.name}"?`)) {
-																event.preventDefault();
-															}
-														}}>Hapus pengguna</button
-													>
-												{/if} -->
-												
-												<!-- {#if account.id !== data.userId}
-													<input type="hidden" name="userId" value={account.id} />
-
-													<button
-														class={cn(
-															'ml-auto rounded-lg px-4 py-2 text-sm font-medium transition',
-															account.accountStatus === 'active'
-																? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
-																: 'bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/20 dark:text-emerald-400'
-														)}
-														type="submit"
-														name="status"
-														value={account.voidStatus === 1 ? '1' : '0'}
-														formaction="?/toggleStatus"
-														formnovalidate
-													>
-														{account.accountStatus === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
-													</button>				
-												{/if} -->
-											</div>
 										</form>
+
+										<div class="flex items-center gap-2 mt-4 md:col-span-2 xl:col-span-5">
+											<button
+												class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+												type="submit" form="userForm">Simpan</button
+											>
+											<button
+												class="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+												type="button"
+												onclick={() => (openRow = null)}>Batal</button
+											>
 
 										{#if account.id !== data.userId}
 											<form method="POST" action="?/toggleStatus" class="contents" use:enhance={async ({cancel}) => {
@@ -448,7 +415,7 @@
 												<input type="hidden" name="status" value={account.voidStatus === 1 ? '1' : '0'} />
 												<button
 													class={cn(
-														'rounded-lg px-4 py-2 text-sm font-medium transition',
+														'ml-auto rounded-lg px-4 py-2 text-sm font-medium transition',
 														account.voidStatus === 0
 															? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
 															: 'bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/20 dark:text-emerald-400'
@@ -460,7 +427,7 @@
 												</button>	
 											</form>			
 										{/if}
-
+										</div>
 									</td>
 								</tr>
 							{:else if isOpen && openRow?.panel === 'reset'}
