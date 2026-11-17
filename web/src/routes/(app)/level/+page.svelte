@@ -142,7 +142,41 @@
 								method="POST"
 								action="?/update"
 								class="contents"
-							>
+								use:enhance={async ({}) => {
+									return async ({ result: serverResult, update }) => {
+										// Update halaman untuk memuat ulang data terbaru
+										await update();
+
+										// Tampilkan pesan sukses jika respons dari server adalah success atau redirect
+										if (serverResult.type === 'success' || serverResult.type === 'redirect') {
+											Swal.fire({
+												title: 'Berhasil!',
+												text: `Data Level ${level.nama_level} berhasil diubah.`,
+												icon: 'success',
+												timer: 1500,
+												showConfirmButton: false,
+												customClass: {
+													popup: 'font-sans',
+													title: 'font-sans',
+													text: 'font-sans',
+													htmlContainer: 'font-sans'
+												}
+											});
+										} else {
+											// Tampilkan pesan error jika server mengembalikan error/failure
+											Swal.fire({
+												title: 'Gagal',
+												text: 'Terjadi kesalahan saat mengubah data pengguna.',
+												icon: 'error',
+												customClass: {
+													popup: 'font-sans',
+													title: 'font-sans',
+													htmlContainer: 'font-sans'
+												}
+											});
+										}
+									};
+								}}>
 								<input type="hidden" name="levelid" value={level.id} />
 								<label class="text-sm font-medium">
 									Jenis Level
