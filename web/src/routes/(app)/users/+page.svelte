@@ -72,7 +72,42 @@
 			</p>
 		{/if}
 
-		<form method="POST" action="?/create" class="mt-6 rounded-2xl border bg-card p-5 md:p-6">
+		<form method="POST" action="?/create" class="mt-6 rounded-2xl border bg-card p-5 md:p-6" use:enhance={async ({ formElement}) => {
+			return async ({ result: serverResult, update }) => {
+				// Update halaman untuk memuat ulang data terbaru
+				await update();
+
+				// Tampilkan pesan sukses jika respons dari server adalah success atau redirect
+				if (serverResult.type === 'success' || serverResult.type === 'redirect') {
+					formElement.reset(); // Reset form setelah berhasil submit
+					Swal.fire({
+						title: 'Berhasil!',
+						text: `Data Pengguna berhasil ditambahkan.`,
+						icon: 'success',
+						timer: 1500,
+						showConfirmButton: false,
+						customClass: {
+							popup: 'font-sans',
+							title: 'font-sans',
+							text: 'font-sans',
+							htmlContainer: 'font-sans'
+						}
+					});
+				} else {
+					// Tampilkan pesan error jika server mengembalikan error/failure
+					Swal.fire({
+						title: 'Gagal',
+						text: 'Terjadi kesalahan saat menambahkan data pengguna.',
+						icon: 'error',
+						customClass: {
+							popup: 'font-sans',
+							title: 'font-sans',
+							htmlContainer: 'font-sans'
+						}
+					});
+				}
+			};							
+		}}>
 			<h2 class="font-semibold">Tambah pengguna</h2>
 			<p class="mt-2 text-xs text-muted-foreground">
 				Pengguna wajib membuat password sendiri saat login pertama.
