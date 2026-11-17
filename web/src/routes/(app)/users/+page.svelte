@@ -432,6 +432,7 @@
 																htmlContainer: 'font-sans'
 															}
 														});
+														openRow = null;
 													} else {
 														// Tampilkan pesan error jika server mengembalikan error/failure
 														Swal.fire({
@@ -444,6 +445,7 @@
 																htmlContainer: 'font-sans'
 															}
 														});
+														openRow = null;
 													}
 												};
 											}}>
