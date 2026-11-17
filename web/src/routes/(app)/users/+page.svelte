@@ -266,8 +266,44 @@
 											method="POST"
 											action="?/update"
 											id="userForm"
-											class="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-2 md:items-end xl:grid-cols-5"
-										>
+											class="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-2 md:items-end xl:grid-cols-5" 
+											use:enhance={async ({}) => {
+												return async ({ result: serverResult, update }) => {
+													// Update halaman untuk memuat ulang data terbaru
+													await update();
+
+													// Tampilkan pesan sukses jika respons dari server adalah success atau redirect
+													if (serverResult.type === 'success' || serverResult.type === 'redirect') {
+														Swal.fire({
+															title: 'Berhasil!',
+															text: `Data Pengguna ${account.name} berhasil diubah.`,
+															icon: 'success',
+															timer: 1500,
+															showConfirmButton: false,
+															customClass: {
+																popup: 'font-sans',
+																title: 'font-sans',
+																text: 'font-sans',
+																htmlContainer: 'font-sans'
+															}
+														});
+														openRow = null;
+													} else {
+														// Tampilkan pesan error jika server mengembalikan error/failure
+														Swal.fire({
+															title: 'Gagal',
+															text: 'Terjadi kesalahan saat mengubah data pengguna.',
+															icon: 'error',
+															customClass: {
+																popup: 'font-sans',
+																title: 'font-sans',
+																htmlContainer: 'font-sans'
+															}
+														});
+														openRow = null;
+													}
+												};
+											}}>
 											<input type="hidden" name="userId" value={account.id} />
 											<label class="text-sm font-medium"
 												>NIK<input class={field} name="nik" value={account.nik} required /></label
