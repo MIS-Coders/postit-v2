@@ -196,27 +196,70 @@
 											method="POST"
 											action="?/update"
 											class="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end"
-											use:enhance={async ({}) => {
+											use:enhance={async ({ submitter }) => {
+												const isToggleStatus = submitter?.getAttribute('formaction') === '?/toggleStatus';
+											
+													const result = await Swal.fire({
+														text: `Yakin ingin ${submitter?.getAttribute('value') === '1' ? 'mengaktifkan' : 'menonaktifkan'} departemen "${department.nama_departement}"?`,
+														showCancelButton: true,
+														confirmButtonText: 'Ya',
+														cancelButtonText: 'Batal',
+														confirmButtonColor: '#007a55',
+														cancelButtonColor: '#d33',
+														customClass: {
+															popup: 'font-sans',
+															title: 'font-sans',
+															htmlContainer: 'font-sans',
+															confirmButton: 'font-sans',
+															cancelButton: 'font-sans'
+														}
+													});
+
+													if (!result.isConfirmed) {
+														cancel();
+														return;
+													}
+
 												return async ({ result: serverResult, update }) => {
 													// Update halaman untuk memuat ulang data terbaru
 													await update();
 
 													// Tampilkan pesan sukses jika respons dari server adalah success atau redirect
 													if (serverResult.type === 'success' || serverResult.type === 'redirect') {
-														Swal.fire({
-															title: 'Berhasil!',
-															text: `Data departemen ${department.nama_departement} berhasil diubah.`,
-															icon: 'success',
-															timer: 1500,
-															showConfirmButton: false,
-															customClass: {
-																popup: 'font-sans',
-																title: 'font-sans',
-																text: 'font-sans',
-																htmlContainer: 'font-sans'
-															}
-														});
-														openRow = null;
+														if (isToggleStatus) {
+															const isActivating = submitter?.getAttribute('value') === '1';
+															await Swal.fire({
+																title: isActivating ? 'Status Dinonaktifkan!' : 'Status Diaktifkan!',
+																text: isActivating
+																	? `Departemen ${department.nama_departement} berhasil dinonaktifkan.`
+																	: `Departemen ${department.nama_departement} berhasil diaktifkan.`,
+																icon: 'success',
+																timer: 1500,
+																showConfirmButton: false,
+																customClass: {
+																	popup: 'font-sans',
+																	title: 'font-sans',
+																	text: 'font-sans',
+																	htmlContainer: 'font-sans'
+																}
+															});
+															openRow = null;
+														} else {
+															Swal.fire({
+																title: 'Berhasil!',
+																text: `Data departemen ${department.nama_departement} berhasil diubah.`,
+																icon: 'success',
+																timer: 1500,
+																showConfirmButton: false,
+																customClass: {
+																	popup: 'font-sans',
+																	title: 'font-sans',
+																	text: 'font-sans',
+																	htmlContainer: 'font-sans'
+																}
+															});
+															openRow = null;
+														}
 													} else {
 														// Tampilkan pesan error jika server mengembalikan error/failure
 														Swal.fire({
