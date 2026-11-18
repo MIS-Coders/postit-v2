@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
+	import { enhance } from '$app/forms';
+	import Swal from 'sweetalert2';
 
 	let { data, form } = $props();
 
@@ -58,7 +60,42 @@
 			</p>
 		{/if}
 
-		<form method="POST" action="?/create" class="mt-6 rounded-2xl border bg-card p-5 md:p-6">
+		<form method="POST" action="?/create" class="mt-6 rounded-2xl border bg-card p-5 md:p-6" use:enhance={async ({ formElement}) => {
+			return async ({ result: serverResult, update }) => {
+				// Update halaman untuk memuat ulang data terbaru
+				await update();
+
+				// Tampilkan pesan sukses jika respons dari server adalah success atau redirect
+				if (serverResult.type === 'success' || serverResult.type === 'redirect') {
+					formElement.reset(); // Reset form setelah berhasil submit
+					Swal.fire({
+						title: 'Berhasil!',
+						text: `Data departemen berhasil ditambahkan.`,
+						icon: 'success',
+						timer: 1500,
+						showConfirmButton: false,
+						customClass: {
+							popup: 'font-sans',
+							title: 'font-sans',
+							text: 'font-sans',
+							htmlContainer: 'font-sans'
+						}
+					});
+				} else {
+					// Tampilkan pesan error jika server mengembalikan error/failure
+					Swal.fire({
+						title: 'Gagal',
+						text: 'Terjadi kesalahan saat menambahkan data departemen.',
+						icon: 'error',
+						customClass: {
+							popup: 'font-sans',
+							title: 'font-sans',
+							htmlContainer: 'font-sans'
+						}
+					});
+				}
+			};							
+		}}>
 			<h2 class="font-semibold">Tambah departement</h2>
 			<div class="mt-4 grid gap-4 md:grid-cols-3">
 				<label class="text-sm font-medium">
@@ -159,7 +196,41 @@
 											method="POST"
 											action="?/update"
 											class="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end"
-										>
+											use:enhance={async ({}) => {
+												return async ({ result: serverResult, update }) => {
+													// Update halaman untuk memuat ulang data terbaru
+													await update();
+
+													// Tampilkan pesan sukses jika respons dari server adalah success atau redirect
+													if (serverResult.type === 'success' || serverResult.type === 'redirect') {
+														Swal.fire({
+															title: 'Berhasil!',
+															text: `Data departemen ${department.nama_departement} berhasil diubah.`,
+															icon: 'success',
+															timer: 1500,
+															showConfirmButton: false,
+															customClass: {
+																popup: 'font-sans',
+																title: 'font-sans',
+																text: 'font-sans',
+																htmlContainer: 'font-sans'
+															}
+														});
+													} else {
+														// Tampilkan pesan error jika server mengembalikan error/failure
+														Swal.fire({
+															title: 'Gagal',
+															text: 'Terjadi kesalahan saat mengubah data departemen.',
+															icon: 'error',
+															customClass: {
+																popup: 'font-sans',
+																title: 'font-sans',
+																htmlContainer: 'font-sans'
+															}
+														});
+													}
+												};
+											}}>
 											<input type="hidden" name="departmentId" value={department.id} />
 											<label class="text-sm font-medium">
 												Nama Departement
