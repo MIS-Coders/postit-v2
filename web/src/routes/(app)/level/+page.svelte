@@ -94,16 +94,16 @@
 			};							
 		}}>
 			<h2 class="font-semibold">Tambah level</h2>
-			<div class="mt-4 grid gap-4 md:grid-cols-3">
+			<div class="mt-4 grid gap-4 md:grid-cols-5">
 				<label class="text-sm font-medium">
 					Jenis Level
 					<input class={field} name="nama_level" placeholder="" required />
 				</label>
+				<button
+					class="mt-5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+					type="submit">Tambah level</button
+				>
 			</div>
-			<button
-				class="mt-5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
-				type="submit">Tambah level</button
-            >
 		</form>
 
 		<div class="mt-6 overflow-hidden rounded-2xl border bg-card">
