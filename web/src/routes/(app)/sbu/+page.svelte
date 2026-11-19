@@ -94,7 +94,7 @@
 			};							
 		}}>
 			<h2 class="font-semibold">Tambah SBU</h2>
-			<div class="mt-4 grid gap-4 md:grid-cols-3">
+			<div class="mt-4 grid gap-4 md:grid-cols-5">
 				<label class="text-sm font-medium">
 					Nama SBU
 					<input class={field} name="nama_sbu" placeholder="" required />
@@ -108,11 +108,11 @@
 							>{/each}
 					</select>
 				</label>
+				<button
+					class="mt-5 rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+					type="submit">Tambah SBU</button
+            	>
 			</div>
-			<button
-				class="mt-5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
-				type="submit">Tambah SBU</button
-            >
 		</form>
 
 		<div class="mt-6 overflow-hidden rounded-2xl border bg-card"></div>
