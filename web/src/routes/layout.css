@@ -1,8 +1,8 @@
 @import 'tailwindcss';
-@import "tw-animate-css";
-@import "shadcn-svelte/tailwind.css";
-@import "@fontsource-variable/geist-mono";
-@import "@fontsource-variable/geist";
+@import 'tw-animate-css';
+@import 'shadcn-svelte/tailwind.css';
+@import '@fontsource-variable/geist-mono';
+@import '@fontsource-variable/geist';
 
 @custom-variant dark (&:is(.dark *));
 /* layar pendek, mis. laptop Windows 1366x768 dengan taskbar + toolbar browser */
@@ -78,6 +78,78 @@
 	--sidebar-accent-foreground: oklch(0.987 0.002 197.1);
 	--sidebar-border: oklch(1 0 0 / 10%);
 	--sidebar-ring: oklch(0.56 0.021 213.5);
+}
+
+/* Chrome 109 and older do not understand OKLCH. Keep the same theme usable
+   instead of letting interactive colors fall back to invalid/opaque values. */
+@supports not (color: oklch(0 0 0)) {
+	:root {
+		--background: #ffffff;
+		--foreground: #182022;
+		--card: #ffffff;
+		--card-foreground: #182022;
+		--popover: #ffffff;
+		--popover-foreground: #182022;
+		--primary: #087f5b;
+		--primary-foreground: #f3fff8;
+		--secondary: #f5f5f5;
+		--secondary-foreground: #27272a;
+		--muted: #f2f5f5;
+		--muted-foreground: #687a7e;
+		--accent: #f2f5f5;
+		--accent-foreground: #273133;
+		--destructive: #dc2626;
+		--border: #e4e9e9;
+		--input: #e4e9e9;
+		--ring: #a3afb1;
+		--chart-1: #61d6a9;
+		--chart-2: #23b985;
+		--chart-3: #109568;
+		--chart-4: #087f5b;
+		--chart-5: #0a684d;
+		--sidebar: #f9fbfb;
+		--sidebar-foreground: #182022;
+		--sidebar-primary: #109568;
+		--sidebar-primary-foreground: #f3fff8;
+		--sidebar-accent: #f2f5f5;
+		--sidebar-accent-foreground: #273133;
+		--sidebar-border: #e4e9e9;
+		--sidebar-ring: #a3afb1;
+	}
+
+	.dark {
+		--background: #182022;
+		--foreground: #f8fafa;
+		--card: #273133;
+		--card-foreground: #f8fafa;
+		--popover: #273133;
+		--popover-foreground: #f8fafa;
+		--primary: #109568;
+		--primary-foreground: #f3fff8;
+		--secondary: #3f3f46;
+		--secondary-foreground: #fafafa;
+		--muted: #354244;
+		--muted-foreground: #a3afb1;
+		--accent: #354244;
+		--accent-foreground: #f8fafa;
+		--destructive: #ef4444;
+		--border: rgba(255, 255, 255, 0.1);
+		--input: rgba(255, 255, 255, 0.15);
+		--ring: #687a7e;
+		--chart-1: #61d6a9;
+		--chart-2: #23b985;
+		--chart-3: #109568;
+		--chart-4: #087f5b;
+		--chart-5: #0a684d;
+		--sidebar: #273133;
+		--sidebar-foreground: #f8fafa;
+		--sidebar-primary: #23b985;
+		--sidebar-primary-foreground: #183b32;
+		--sidebar-accent: #354244;
+		--sidebar-accent-foreground: #f8fafa;
+		--sidebar-border: rgba(255, 255, 255, 0.1);
+		--sidebar-ring: #687a7e;
+	}
 }
 
 @theme inline {
