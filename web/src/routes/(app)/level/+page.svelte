@@ -190,9 +190,9 @@
 									/>
 								</label>
 								<button
-									class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border text-sm font-medium transition hover:bg-muted md:size-auto md:px-4 md:py-2"
+									class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border text-sm font-medium transition hover:bg-muted md:size-auto md:px-4 md:py-2 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400"
 									type="submit">
-									<RiSaveLine/>
+									<RiSaveLine class="inline sm:hidden size-6"/>
 									<span class="hidden md:inline">Simpan</span>
 								</button>
 							</form>
@@ -276,7 +276,7 @@
 									type="submit"
 									formnovalidate
 								>
-								<RiShutDownLine />
+								<RiShutDownLine class="inline sm:hidden size-6" />
 								<span class="hidden md:inline">
 									{level.voidStatus === 1 ? 'Aktifkan' : 'Nonaktifkan'}
 								</span>
