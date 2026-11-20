@@ -2,6 +2,8 @@
 	import { cn } from '$lib/utils';
 	import { enhance } from '$app/forms';
 	import Swal from 'sweetalert2';
+	import RiSaveLine from 'remixicon-svelte/icons/save-line';
+	import RiShutDownLine from 'remixicon-svelte/icons/shut-down-line';
 
 	let { data, form } = $props();
 
@@ -94,7 +96,7 @@
 			};							
 		}}>
 			<h2 class="font-semibold">Tambah level</h2>
-			<div class="mt-4 grid gap-4 md:grid-cols-5">
+			<div class="mt-4 grid gap-4 grid-cols-[1fr_auto] md:grid-cols-5">
 				<label class="text-sm font-medium">
 					Jenis Level
 					<input class={field} name="nama_level" placeholder="" required />
@@ -116,15 +118,15 @@
 						{data.pagination.total} level ditemukan
 					</p>
 				</div>
-				<form method="GET" class="flex w-full flex-wrap gap-2 md:w-auto md:flex-nowrap">
+				<form method="GET" class="flex w-full flex-nowrap gap-2 md:w-auto">
 					<input
-						class="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary md:w-72"
+						class="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary md:w-72"
 						name="q"
 						value={data.search}
 						placeholder="Cari nama level"
 					/>
 					<button
-						class="rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted"
+						class="shrink-0 rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted"
 						type="submit">Cari</button
 					>
 					{#if data.search}<a
@@ -137,7 +139,7 @@
 			<div class="divide-y">
 				{#each data.levels as level (level.id)}
 					<div class="p-5 md:px-6">
-						<div class="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+						<div class="flex items-end gap-2 md:grid md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:gap-3">
 							<form
 								method="POST"
 								action="?/update"
@@ -178,8 +180,8 @@
 									};
 								}}>
 								<input type="hidden" name="levelid" value={level.id} />
-								<label class="text-sm font-medium">
-									Jenis Level
+								<label class="min-w-0 flex-1 text-sm font-medium md:flex-none">
+									<span class='sr-only md:not-sr-only'>Jenis Level</span>
 									<input
 										class={field}
 										name="nama_level"
@@ -188,9 +190,11 @@
 									/>
 								</label>
 								<button
-									class="rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
-									type="submit">Simpan</button
-								>
+									class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border text-sm font-medium transition hover:bg-muted md:size-auto md:px-4 md:py-2"
+									type="submit">
+									<RiSaveLine/>
+									<span class="hidden md:inline">Simpan</span>
+								</button>
 							</form>
 
 							<!-- <form method="POST" action="?/delete" class="contents" onsubmit={(event) => {
@@ -264,7 +268,7 @@
 								<input type="hidden" name="status" value={level.voidStatus === 1 ? '1' : '0'} />
 								<button
 									class={cn(
-										'rounded-lg px-4 py-2 text-sm font-medium transition',
+										'inline-flex size-9 shrink-0 items-center justify-center rounded-lg md:size-auto md:px-4 md:py-2 text-sm font-medium transition',
 										level.voidStatus === 0
 											? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
 											: 'bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/20 dark:text-emerald-400'
@@ -272,7 +276,10 @@
 									type="submit"
 									formnovalidate
 								>
+								<RiShutDownLine />
+								<span class="hidden md:inline">
 									{level.voidStatus === 1 ? 'Aktifkan' : 'Nonaktifkan'}
+								</span>
 								</button>	
 							</form>
 						</div>
