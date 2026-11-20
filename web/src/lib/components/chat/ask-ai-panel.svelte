@@ -115,15 +115,6 @@
 	)}
 	aria-label="Tanya AI"
 >
-	<!-- latar: gradasi emerald + grid tipis -->
-	<div
-		class="pointer-events-none absolute inset-0 bg-linear-to-b from-transparent via-primary/[0.03] to-primary/10"
-	></div>
-	<div
-		class="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 opacity-60 [mask-image:linear-gradient(to_top,black,transparent)]"
-		style="background-image: linear-gradient(to right, var(--border) 1px, transparent 1px), linear-gradient(to bottom, var(--border) 1px, transparent 1px); background-size: 72px 72px;"
-	></div>
-
 	<header class="relative flex items-center gap-2 px-5 py-4 short:py-2.5">
 		<RiSparkling2Line class="size-5 text-primary" />
 		<h2 class="text-lg font-semibold text-primary">Tanya AI</h2>
@@ -152,7 +143,12 @@
 					<RiExpandDiagonalLine class="size-4" />
 				{/if}
 			</button>
-			<button type="button" class={iconBtn} aria-label="Tutup panel" onclick={() => (ui.askAi.open = false)}>
+			<button
+				type="button"
+				class={iconBtn}
+				aria-label="Tutup panel"
+				onclick={() => (ui.askAi.open = false)}
+			>
 				<RiCloseLine class="size-5" />
 			</button>
 		</div>
@@ -160,14 +156,20 @@
 
 	<div bind:this={scroller} class="relative min-h-0 flex-1 overflow-y-auto px-5">
 		{#if messages.length === 0}
-			<div class="flex min-h-full flex-col items-center justify-center py-10 text-center short:py-3">
+			<div
+				class="flex min-h-full flex-col items-center justify-center py-10 text-center short:py-3"
+			>
 				<span
-					class="flex size-16 shrink-0 items-center justify-center rounded-full short:size-11 bg-linear-to-br from-emerald-400 to-primary text-primary-foreground shadow-[0_10px_30px_-6px] shadow-primary/60 ring-4 ring-primary/10"
+					class="flex size-16 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-emerald-400 to-primary text-primary-foreground shadow-[0_10px_30px_-6px] ring-4 shadow-primary/60 ring-primary/10 short:size-11"
 				>
 					<RiSparkling2Fill class="size-7 short:size-5" />
 				</span>
-				<p class="mt-6 text-2xl font-semibold text-primary short:mt-3 short:text-xl">Hai, {firstName}</p>
-				<p class="mt-1 text-lg font-medium short:text-base">Ada yang bisa dibantu soal SOP/IK atau Formulir?</p>
+				<p class="mt-6 text-2xl font-semibold text-primary short:mt-3 short:text-xl">
+					Hai, {firstName}
+				</p>
+				<p class="mt-1 text-lg font-medium short:text-base">
+					Ada yang bisa dibantu soal SOP/IK atau Formulir?
+				</p>
 
 				<p class="mt-14 text-sm text-muted-foreground short:mt-5">Saran:</p>
 				<div class="mt-3 flex flex-col items-center gap-2 short:mt-2 short:gap-1.5">
@@ -175,7 +177,7 @@
 						<button
 							type="button"
 							onclick={() => send(s)}
-							class="rounded-full border bg-background px-3 py-1.5 text-sm shadow-xs transition short:py-1 hover:border-primary/40 hover:text-primary"
+							class="rounded-full border bg-background px-3 py-1.5 text-sm shadow-xs transition hover:border-primary/40 hover:text-primary short:py-1"
 						>
 							{s}
 						</button>
@@ -186,16 +188,22 @@
 			<div class="flex flex-col gap-5 py-4">
 				{#each messages as msg, i (i)}
 					{#if msg.role === 'user'}
-						<div class="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-sm whitespace-pre-wrap text-primary-foreground">
+						<div
+							class="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-sm whitespace-pre-wrap text-primary-foreground"
+						>
 							{msg.content}
 						</div>
 					{:else}
 						<div class="flex gap-2.5">
-							<span class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+							<span
+								class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
+							>
 								<RiSparkling2Fill class="size-3.5" />
 							</span>
 							{#if msg.content}
-								<div class="prose prose-sm min-w-0 max-w-none text-sm dark:prose-invert prose-a:text-primary">
+								<div
+									class="prose prose-sm max-w-none min-w-0 text-sm dark:prose-invert prose-a:text-primary"
+								>
 									{@html marked.parse(msg.content)}
 								</div>
 							{:else}
@@ -213,7 +221,9 @@
 
 	<footer class="relative space-y-2 p-4 pt-2 short:p-3 short:pt-1">
 		{#if ui.askAi.context}
-			<div class="flex items-center gap-2 rounded-xl border bg-background/80 px-3 py-2 text-sm backdrop-blur">
+			<div
+				class="flex items-center gap-2 rounded-xl border bg-background/80 px-3 py-2 text-sm backdrop-blur"
+			>
 				<RiFileTextLine class="size-4 shrink-0 text-muted-foreground" />
 				<span class="min-w-0 flex-1 truncate">
 					<span class="font-mono text-xs text-muted-foreground">{ui.askAi.context.no_dokumen}</span>
