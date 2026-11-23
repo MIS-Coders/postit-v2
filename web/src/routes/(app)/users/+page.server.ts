@@ -49,7 +49,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		? or(
 				ilike(user.name, `%${search}%`),
 				ilike(user.username, `%${search}%`),
-				ilike(user.email, `%${search}%`)
+				ilike(user.email, `%${search}%`),
+				ilike(user.nik, `%${search}%`)
 			)
 		: undefined;
 	const filter = and(

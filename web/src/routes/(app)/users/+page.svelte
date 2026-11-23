@@ -233,7 +233,7 @@
 						class="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary md:w-64"
 						name="q"
 						value={data.search}
-						placeholder="Cari nama, username, email…"
+						placeholder="Cari nama, username, email, nik…"
 					/>
 					<select
 						class="rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
