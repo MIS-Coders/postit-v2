@@ -44,6 +44,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const roleFilter = validRole(requestedRole) ? requestedRole : null;
 	const requestedStatus = url.searchParams.get('status') ?? '';
 	const statusFilter = validStatus(requestedStatus) ? requestedStatus : null;
+	const requestedDept = url.searchParams.get('dept') ?? '';
+	const deptFilter = parseIdInput(requestedDept) ? requestedDept : null;
 	const requestedPage = Number.parseInt(url.searchParams.get('page') ?? '1', 10);
 	const searchFilter = search
 		? or(
@@ -57,6 +59,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		searchFilter,
 		roleFilter ? eq(user.role, roleFilter) : undefined,
 		statusFilter ? eq(user.accountStatus, statusFilter) : undefined,
+		deptFilter ? eq(user.idDepartement, deptFilter) : undefined,
 		access.role === 'admin' ? ne(user.role, 'superadmin') : undefined
 	);
 	const [{ total }] = await db.select({ total: count() }).from(user).where(filter);
@@ -114,6 +117,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		search,
 		roleFilter,
 		statusFilter,
+		deptFilter,
 		allStatus,
 		allRoles: roles,
 		assignableRoles:

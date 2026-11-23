@@ -73,8 +73,29 @@
 		if (data.search) params.set('q', data.search);
 		if (data.roleFilter) params.set('role', data.roleFilter);
 		if (data.statusFilter) params.set('status', data.statusFilter);
+		if (data.deptFilter) params.set('dept', data.deptFilter);
 		params.set('page', String(page));
 		return `?${params.toString()}`;
+	}
+
+	function shortText(text: string) {
+		const value = text.trim();
+
+		const exceptions = [
+			/^IK-Mutu$/i,
+			/^IK-Lingkungan$/i,
+			/^IK-K3$/i
+		];
+
+		if (exceptions.some((pattern) => pattern.test(value))) {
+			return value;
+		}
+
+		if (value.includes(' - ')) {
+			return value.split(' - ')[0].trim();
+		}
+
+		return value;
 	}
 </script>
 
@@ -255,11 +276,21 @@
 						<option value="">Semua role</option>
 						{#each data.allRoles as role}<option value={role}>{role}</option>{/each}
 					</select>
+					<select
+						class="rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+						name="dept"
+						value={data.departments ?? ''}
+					>
+						<option value="">Semua Dept</option>
+						{#each data.departments as department}
+							<option value={department.id}>{shortText(department.namaDepartement)}</option>
+						{/each}
+					</select>
 					<button
 						class="rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted"
 						type="submit">Cari</button
 					>
-					{#if data.search || data.roleFilter || data.statusFilter}<a
+					{#if data.search || data.roleFilter || data.statusFilter || data.deptFilter}<a
 							class="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
 							href="?">Reset</a
 						>{/if}
