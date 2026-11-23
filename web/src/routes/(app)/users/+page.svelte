@@ -11,17 +11,52 @@
 	let openRow = $state<{ id: string; panel: 'edit' | 'reset' } | null>(null);
 	let newUserPassword = $state('');
 	let resetPassword = $state('');
+	let passwordCopied = $state(false);
 
 	const field =
 		'mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary';
 
-	function formattedDate(date: Date | string) {
+	function formattedDate(date: Date | string | null) {
+		if (!date) return '-';
 		return new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(new Date(date));
 	}
 
 	function toggleRow(id: string, panel: 'edit' | 'reset') {
 		openRow = openRow?.id === id && openRow.panel === panel ? null : { id, panel };
-		resetPassword = '';
+		resetPassword = panel === 'reset' && data.role === 'superadmin' ? temporaryPassword() : '';
+		passwordCopied = false;
+	}
+
+	function temporaryPassword() {
+		const required = [
+			'ABCDEFGHJKLMNPQRSTUVWXYZ',
+			'abcdefghijkmnopqrstuvwxyz',
+			'23456789',
+			'!@#$%&*?'
+		];
+		const all = required.join('');
+		const randomIndex = (length: number) => {
+			const values = new Uint32Array(1);
+			crypto.getRandomValues(values);
+			return values[0] % length;
+		};
+		const characters = required.map((set) => set[randomIndex(set.length)]);
+		while (characters.length < 14) characters.push(all[randomIndex(all.length)]);
+		for (let index = characters.length - 1; index > 0; index--) {
+			const swap = randomIndex(index + 1);
+			[characters[index], characters[swap]] = [characters[swap], characters[index]];
+		}
+		return characters.join('');
+	}
+
+	function regeneratePassword() {
+		resetPassword = temporaryPassword();
+		passwordCopied = false;
+	}
+
+	async function copyPassword() {
+		await navigator.clipboard.writeText(resetPassword);
+		passwordCopied = true;
 	}
 
 	function statusBadge(status: string | null | undefined) {
@@ -414,92 +449,105 @@
 											</label>
 										</form>
 
-										<div class="flex items-center gap-2 mt-4 md:col-span-2 xl:col-span-5">
-											<button
-												class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
-												type="submit" form="userForm">Simpan</button
-											>
-											<button
-												class="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
-												type="button"
-												onclick={() => (openRow = null)}>Batal</button
-											>
-
-										{#if account.id !== data.userId}
-											<form method="POST" action="?/toggleStatus" class="contents" use:enhance={async ({cancel}) => {
-												const result = await Swal.fire({
-													text: `Yakin ingin ${account.voidStatus === 1 ? 'mengaktifkan' : 'menonaktifkan'} pengguna "${account.name}"?`,
-													showCancelButton: true,
-													confirmButtonText: 'Ya',
-													cancelButtonText: 'Batal',
-													confirmButtonColor: '#007a55',
-													cancelButtonColor: '#d33',
-													customClass: {
-														popup: 'font-sans',
-														title: 'font-sans',
-														htmlContainer: 'font-sans',
-														confirmButton: 'font-sans',
-														cancelButton: 'font-sans'
-													}
-												});
-
-												if (!result.isConfirmed) {
-													cancel(); // Cancel the form submission if not confirmed
-													return;
-												}
-
-												return async ({ result: serverResult, update }) => {
-													// Update halaman untuk memuat ulang data terbaru
-													await update();
-
-													// Tampilkan pesan sukses jika respons dari server adalah success atau redirect
-													if (serverResult.type === 'success' || serverResult.type === 'redirect') {
-														Swal.fire({
-															title: 'Berhasil!',
-															text: `Pengguna berhasil ${account.voidStatus === 1 ? 'dinonaktifkan' : 'diaktifkan'}.`,
-															icon: 'success',
-															timer: 1500,
-															showConfirmButton: false,
-															customClass: {
-																popup: 'font-sans',
-																title: 'font-sans',
-																text: 'font-sans',
-																htmlContainer: 'font-sans'
-															}
-														});
-														openRow = null;
-													} else {
-														// Tampilkan pesan error jika server mengembalikan error/failure
-														Swal.fire({
-															title: 'Gagal',
-															text: 'Terjadi kesalahan saat mengubah status.',
-															icon: 'error',
-															customClass: {
-																popup: 'font-sans',
-																title: 'font-sans',
-																htmlContainer: 'font-sans'
-															}
-														});
-														openRow = null;
-													}
-												};
-											}}>
-												<input type="hidden" name="userId" value={account.id} />
-												<input type="hidden" name="status" value={account.voidStatus === 1 ? '1' : '0'} />
+											<div class="flex items-center gap-2 mt-4 md:col-span-2 xl:col-span-5">
 												<button
-													class={cn(
-														'ml-auto rounded-lg px-4 py-2 text-sm font-medium transition',
-														account.voidStatus === 0
-															? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
-															: 'bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/20 dark:text-emerald-400'
-													)}
-													type="submit"
-													formnovalidate
+													class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+													type="submit" form="userForm">Simpan</button
 												>
-													{account.voidStatus === 1 ? 'Aktifkan' : 'Nonaktifkan'}
-												</button>	
-											</form>			
-										{/if}
+												<button
+													class="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+													type="button"
+													onclick={() => (openRow = null)}>Batal</button
+												>
+												<!-- {#if account.id !== data.userId}
+													<button
+														class="ml-auto rounded-lg px-4 py-2 text-sm font-medium text-destructive transition hover:underline"
+														type="submit"
+														formaction="?/delete"
+														formnovalidate
+														onclick={(event) => {
+															if (!confirm(`Yakin ingin menghapus pengguna "${account.name}"?`)) {
+																event.preventDefault();
+															}
+														}}>Hapus pengguna</button
+													>
+												{/if} -->
+												
+												{#if account.id !== data.userId}
+													<form method="POST" action="?/toggleStatus" class="contents" use:enhance={async ({cancel}) => {
+													const result = await Swal.fire({
+														text: `Yakin ingin ${account.voidStatus === 1 ? 'mengaktifkan' : 'menonaktifkan'} pengguna "${account.name}"?`,
+														showCancelButton: true,
+														confirmButtonText: 'Ya',
+														cancelButtonText: 'Batal',
+														confirmButtonColor: '#007a55',
+														cancelButtonColor: '#d33',
+														customClass: {
+															popup: 'font-sans',
+															title: 'font-sans',
+															htmlContainer: 'font-sans',
+															confirmButton: 'font-sans',
+															cancelButton: 'font-sans'
+														}
+													});
+
+													if (!result.isConfirmed) {
+														cancel(); // Cancel the form submission if not confirmed
+														return;
+													}
+
+													return async ({ result: serverResult, update }) => {
+														// Update halaman untuk memuat ulang data terbaru
+														await update();
+
+														// Tampilkan pesan sukses jika respons dari server adalah success atau redirect
+														if (serverResult.type === 'success' || serverResult.type === 'redirect') {
+															Swal.fire({
+																title: 'Berhasil!',
+																text: `Pengguna berhasil ${account.voidStatus === 1 ? 'dinonaktifkan' : 'diaktifkan'}.`,
+																icon: 'success',
+																timer: 1500,
+																showConfirmButton: false,
+																customClass: {
+																	popup: 'font-sans',
+																	title: 'font-sans',
+																	text: 'font-sans',
+																	htmlContainer: 'font-sans'
+																}
+															});
+															openRow = null;
+														} else {
+															// Tampilkan pesan error jika server mengembalikan error/failure
+															Swal.fire({
+																title: 'Gagal',
+																text: 'Terjadi kesalahan saat mengubah status.',
+																icon: 'error',
+																customClass: {
+																	popup: 'font-sans',
+																	title: 'font-sans',
+																	htmlContainer: 'font-sans'
+																}
+															});
+															openRow = null;
+														}
+													};
+												}}>
+													<input type="hidden" name="userId" value={account.id} />
+													<input type="hidden" name="status" value={account.voidStatus === 1 ? '1' : '0'} />
+													<button
+														class={cn(
+															'ml-auto rounded-lg px-4 py-2 text-sm font-medium transition',
+															account.voidStatus === 0
+																? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
+																: 'bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600/20 dark:text-emerald-400'
+														)}
+														type="submit"
+														formnovalidate
+													>
+														{account.voidStatus === 1 ? 'Aktifkan' : 'Nonaktifkan'}
+													</button>	
+												</form>			
+											{/if}
 										</div>
 									</td>
 								</tr>
@@ -512,28 +560,51 @@
 											class="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-[20rem_minmax(0,1fr)] md:gap-x-6"
 										>
 											<input type="hidden" name="userId" value={account.id} />
-											<label class="text-sm font-medium"
-												>Password sementara untuk {account.name}<input
-													class={field}
-													name="password"
-													type="password"
-													minlength="8"
-													autocomplete="new-password"
-													aria-describedby="reset-password-strength"
-													bind:value={resetPassword}
-													required
-												/></label
-											>
+											<label class="text-sm font-medium">
+												Password sementara untuk {account.name}
+												<div class="mt-1 flex gap-2">
+													<input
+														class="w-full rounded-lg border bg-background px-3 py-2 font-mono text-sm outline-none focus:border-primary"
+														name="password"
+														type={data.role === 'superadmin' ? 'text' : 'password'}
+														minlength="8"
+														autocomplete="new-password"
+														aria-describedby="reset-password-strength"
+														bind:value={resetPassword}
+														readonly={data.role === 'superadmin'}
+														required
+													/>
+													{#if data.role === 'superadmin'}
+														<button
+															class="rounded-lg border px-3 py-2 text-xs font-medium transition hover:bg-muted"
+															type="button"
+															onclick={copyPassword}>{passwordCopied ? 'Tersalin' : 'Salin'}</button
+														>
+													{/if}
+												</div>
+											</label>
 											<PasswordStrength
 												id="reset-password-strength"
 												password={resetPassword}
 												class="md:pt-6"
 											/>
 											<p class="text-xs text-muted-foreground md:self-center">
-												Sesi pengguna akan diakhiri dan ia wajib membuat password baru saat login
-												berikutnya.
+												{#if data.role === 'superadmin'}
+													Password lama tidak dapat dilihat. Salin password sementara ini dan
+													berikan kepada pengguna.
+												{:else}
+													Sesi pengguna akan diakhiri dan ia wajib membuat password baru saat login
+													berikutnya.
+												{/if}
 											</p>
 											<div class="flex gap-2 md:justify-end">
+												{#if data.role === 'superadmin'}
+													<button
+														class="rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+														type="button"
+														onclick={regeneratePassword}>Buat ulang</button
+													>
+												{/if}
 												<button
 													class="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
 													type="button"

@@ -4,7 +4,18 @@ import tailwindcss from '@tailwindcss/vite';
 import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
 
+const browserExecutablePath = process.env.PLAYWRIGHT_EXECUTABLE_PATH;
+
 export default defineConfig({
+	build: {
+		// Chrome 109 is still used by some production clients.
+		target: 'chrome109'
+	},
+	worker: {
+		// PDF.js starts its worker as an ES module; this also lets the compatibility
+		// bootstrap finish before the PDF.js worker module is evaluated.
+		format: 'es'
+	},
 	// Dev server di balik reverse proxy untuk domain produksi.
 	server: {
 		host: true,
@@ -23,7 +34,8 @@ export default defineConfig({
 		sveltekit({
 			compilerOptions: {
 				// Force runes mode for the project, except for libraries. Can be removed in svelte 6.
-				runes: ({ filename }) => filename.split(/[/\\]/).includes('node_modules') ? undefined : true
+				runes: ({ filename }) =>
+					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
 			adapter: adapter(),
 			typescript: {
@@ -42,7 +54,11 @@ export default defineConfig({
 					name: 'client',
 					browser: {
 						enabled: true,
-						provider: playwright(),
+						provider: playwright({
+							launchOptions: browserExecutablePath
+								? { executablePath: browserExecutablePath }
+								: undefined
+						}),
 						instances: [{ browser: 'chromium', headless: true }]
 					},
 					include: ['src/**/*.svelte.{test,spec}.{js,ts}'],

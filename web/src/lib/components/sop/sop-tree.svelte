@@ -60,7 +60,7 @@
 			<button
 				type="button"
 				onclick={onCollapse}
-				class="hidden size-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground md:flex"
+				class="sop-tree-hover hidden size-8 items-center justify-center rounded-lg text-muted-foreground transition md:flex"
 				title="Tutup daftar dokumen"
 				aria-label="Tutup daftar dokumen"
 			>
@@ -84,7 +84,7 @@
 						type="button"
 						onclick={() => toggle(node.dept.id)}
 						aria-expanded={isOpen}
-						class="group flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-muted"
+						class="sop-tree-hover group flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition"
 					>
 						<RiArrowRightSLine
 							class={cn(
@@ -113,10 +113,10 @@
 										data-sveltekit-noscroll
 										aria-current={active ? 'page' : undefined}
 										class={cn(
-											'flex items-start gap-2 rounded-lg px-2 py-1.5 text-sm transition',
+											'sop-document-link flex items-start gap-2 rounded-lg px-2 py-1.5 text-sm transition',
 											active
-												? 'bg-primary/10 text-primary'
-												: 'text-foreground/80 hover:bg-muted hover:text-foreground'
+												? 'bg-[#e7f4ef] text-[#087f5b] dark:bg-[#173d32] dark:text-[#6ee7b7]'
+												: 'text-foreground'
 										)}
 									>
 										<RiFileTextLine
@@ -142,3 +142,11 @@
 		</ul>
 	</div>
 </aside>
+
+<style>
+	.sop-tree-hover:hover,
+	.sop-document-link:not([aria-current='page']):hover {
+		background-color: var(--muted);
+		color: var(--foreground);
+	}
+</style>

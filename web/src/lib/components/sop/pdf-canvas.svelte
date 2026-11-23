@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import type { PDFDocumentProxy } from 'pdfjs-dist/legacy/build/pdf.mjs';
+	import '$lib/pdf-compat';
+	import pdfWorkerUrl from '$lib/pdf-worker-compat.ts?worker&url';
 	import {
 		findPdfMatches,
 		type PdfHighlightBox,
@@ -62,9 +64,8 @@
 		contents.clear();
 		(async () => {
 			const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-			const worker = await import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url');
 			if (cancelled) return;
-			pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+			pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 			const task = pdfjs.getDocument({ url });
 			destroy = () => {
 				void task.destroy();
@@ -170,8 +171,11 @@
 					searched = true;
 					if (found.length) showMatch(0);
 				}
-			} catch {
-				if (!cancelled) searchError = true;
+			} catch (cause) {
+				if (!cancelled) {
+					console.error('PDF search failed', cause);
+					searchError = true;
+				}
 			} finally {
 				if (!cancelled) searching = false;
 			}
