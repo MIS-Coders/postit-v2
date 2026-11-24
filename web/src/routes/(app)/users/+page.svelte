@@ -73,7 +73,9 @@
 		if (data.search) params.set('q', data.search);
 		if (data.roleFilter) params.set('role', data.roleFilter);
 		if (data.statusFilter) params.set('status', data.statusFilter);
-		if (data.deptFilter) params.set('dept', data.deptFilter);
+		if (data.deptFilter !== null & data.deptFilter !== undefined) {
+			params.set('dept', String(data.deptFilter));
+		} 
 		params.set('page', String(page));
 		return `?${params.toString()}`;
 	}
@@ -279,11 +281,11 @@
 					<select
 						class="rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
 						name="dept"
-						value={data.departments ?? ''}
+						value={String(data.deptFilter ?? '')}
 					>
 						<option value="">Semua Dept</option>
 						{#each data.departments as department}
-							<option value={department.id}>{shortText(department.namaDepartement)}</option>
+							<option value={String(department.id)}>{shortText(department.namaDepartement)}</option>
 						{/each}
 					</select>
 					<button
