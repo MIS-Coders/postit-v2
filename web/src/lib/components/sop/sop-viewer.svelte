@@ -200,9 +200,10 @@
 								<button
 									type="button"
 									onclick={printDocument}
-									class="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-primary transition hover:bg-primary/10"
+									class="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-semibold text-primary hover:text-primary-foreground hover:bg-primary transition hover:bg-primary/90
+									shadow-lg shadow-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
 								>
-									<RiPrinterLine class="size-3.5" />
+									<RiPrinterLine class="size-4" />
 									Print
 								</button>
 							{/if}
