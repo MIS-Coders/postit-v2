@@ -8,7 +8,7 @@
 </script>
 
 <svelte:head><title>Ganti Password · PostIt</title></svelte:head>
-<main class="flex min-h-dvh items-center justify-center bg-muted/30 p-5">
+<main class="flex min-h-dvh items-center justify-center bg-muted/30 p-5 font-sans">
 	<div class="w-full max-w-md rounded-2xl border bg-card p-6 shadow-sm">
 		<h1 class="text-2xl font-semibold">Ganti password</h1>
 		<p class="mt-3 text-sm text-muted-foreground">
