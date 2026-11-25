@@ -102,6 +102,14 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.from(departement)
 		.where(eq(departement.voidStatus, 0))
 		.orderBy(departement.namaDepartement);
+	// departemen yang mempunyai paling sedikit satu user
+	const userDepartments = await db 
+		.select({ id: departement.id, namaDepartement: departement.namaDepartement, userCount: count(user.id) })
+		.from(departement)
+		.innerJoin(user, eq(user.idDepartement, departement.id))
+		.where(eq(departement.voidStatus, 0))
+		.groupBy(departement.id, departement.namaDepartement)
+		.orderBy(departement.namaDepartement);
 	const levels = await db
 		.select({ id: level.id, namaLevel: level.namaLevel })
 		.from(level)
@@ -113,6 +121,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		users,
 		sbus,
 		departments,
+		userDepartments,
 		levels,
 		search,
 		roleFilter,

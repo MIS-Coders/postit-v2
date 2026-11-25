@@ -284,7 +284,7 @@
 						value={String(data.deptFilter ?? '')}
 					>
 						<option value="">Semua Dept</option>
-						{#each data.departments as department}
+						{#each data.userDepartments as department}
 							<option value={String(department.id)}>{shortText(department.namaDepartement)}</option>
 						{/each}
 					</select>
