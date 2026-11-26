@@ -61,7 +61,7 @@
 
 	function statusBadge(status: string | null | undefined) {
 		if (status === 'inactive')
-			return { label: 'Nonaktif', class: 'bg-red-100 text-red-800 border' };
+			return { label: 'Nonaktif', class: 'bg-red-100 text-red-800 border dark:bg-red-950 dark:text-red-300' };
 		return {
 			label: 'Aktif',
 			class: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
