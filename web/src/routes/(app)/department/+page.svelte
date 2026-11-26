@@ -137,15 +137,15 @@
 						{data.pagination.total} departemen ditemukan
 					</p>
 				</div>
-				<form method="GET" class="flex w-full flex-wrap gap-2 md:w-auto md:flex-nowrap">
+				<form method="GET" class="flex w-full flex-nowrap gap-2 md:w-auto">
 					<input
-						class="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary md:w-72"
+						class="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary md:w-72"
 						name="q"
 						value={data.search}
 						placeholder="Cari nama departemen, GM, atau SPI…"
 					/>
 					<button
-						class="rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted"
+						class="shrink-0 rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted"
 						type="submit">Cari</button
 					>
 					{#if data.search}<a
