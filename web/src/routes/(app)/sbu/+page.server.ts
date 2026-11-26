@@ -1,5 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { sql, eq, asc, ilike, or, count } from 'drizzle-orm';
+import { sql, eq, asc, ilike, or, count, and } from 'drizzle-orm';
 
 import { db } from '$lib/server/db';
 import { user, sbu, level} from '$lib/server/db/schema';
@@ -50,7 +50,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         .offset(offset);
 
     const users = await db.select({ legacyId: user.legacyId, name: user.name }).from(user).orderBy(user.name);
-    const gmUsers = await db.select({ legacyId: user.legacyId, name: user.name }).from(user).innerJoin(level, eq(user.idLevel, level.id)).where(eq(level.namaLevel, 'General Manager / Head')).orderBy(user.name);
+    const gmUsers = await db.select({ legacyId: user.legacyId, name: user.name }).from(user).innerJoin(level, eq(user.idLevel, level.id)).where(and(eq(level.namaLevel, 'General Manager / Head'), eq(user.voidStatus, 0))).orderBy(user.name);
     return {
         ...access,
         users,
