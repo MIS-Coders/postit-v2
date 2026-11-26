@@ -70,7 +70,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			legacy_id AS legacy_id,
 			name AS name
 		FROM public."user" u JOIN public.level l on l.id = u.id_level
-		WHERE legacy_id IS NOT NULL AND l.nama_level = 'General Manager / Head'
+		WHERE legacy_id IS NOT NULL AND l.nama_level = 'General Manager / Head' AND u.void_status = 0
 		ORDER BY name ASC
 	`);
 
@@ -79,7 +79,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			legacy_id AS legacy_id,
 			name AS name
 		FROM public."user" u JOIN public.level l on l.id = u.id_level
-		WHERE legacy_id IS NOT NULL AND l.nama_level = 'Superintendent / Manager'
+		WHERE legacy_id IS NOT NULL AND l.nama_level = 'Superintendent / Manager' AND u.void_status = 0
 		ORDER BY name ASC
 	`);
 
