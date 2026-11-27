@@ -132,7 +132,7 @@
 						class="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary md:w-72"
 						name="q"
 						value={data.search}
-						placeholder="Cari nama SBU"
+						placeholder="Cari data SBU"
 					/>
 					<button
 						class=" shrink-0 rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted"

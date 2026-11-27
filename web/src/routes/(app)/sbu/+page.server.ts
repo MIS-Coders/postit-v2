@@ -21,11 +21,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     const searchTerm = search ? `%${search.toLowerCase()}%` : undefined;
     const searchClause = searchTerm
         ? or (
-                ilike(sbu.namaSbu, `%${search}%`)
+                ilike(sbu.namaSbu, `%${search}%`),
+                ilike(user.name, `%${search}%`)
              )
         : undefined;
 
-    const [{ total }] = await db.select({ total: count() }).from(sbu).where(searchClause);
+    const [{ total }] = await db.select({ total: count() }).from(sbu).leftJoin(user, eq(sbu.useridSbu, user.legacyId)).where(searchClause);
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const page = Math.min(
         Math.max(Number.isFinite(requestedPage) ? requestedPage : 1, 1),
